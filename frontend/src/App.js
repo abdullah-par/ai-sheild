@@ -1,19 +1,30 @@
 import React, { useState } from 'react';
 import './index.css';
 import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import LandingPage from './pages/LandingPage';
 import ScanPage from './pages/ScanPage';
 import ResultPage from './pages/ResultPage';
 import Dashboard from './pages/Dashboard';
 import PhishingPage from './pages/PhishingPage';
 import SteganographyPage from './pages/SteganographyPage';
+import AuthPage from './pages/AuthPage';
+import FloatingChatbot from './components/FloatingChatbot';
+import { AuthProvider } from './services/AuthContext';
 
-function App() {
+function AppContent() {
   const [currentPage, setCurrentPage] = useState('home');
   const [pageState, setPageState] = useState({});
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+
+  React.useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
 
   const navigate = (page, state = {}) => {
-    // Only scroll to top when actually switching pages (not same-page section scrolls)
     if (page !== currentPage) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -25,6 +36,8 @@ function App() {
     switch (currentPage) {
       case 'home':
         return <LandingPage onNavigate={navigate} />;
+      case 'auth':
+        return <AuthPage onNavigate={navigate} initialMode={pageState.mode} />;
       case 'scan':
         return (
           <ScanPage
@@ -42,19 +55,34 @@ function App() {
       case 'dashboard':
         return <Dashboard onNavigate={navigate} />;
       case 'phishing':
-        return <PhishingPage />;
+        return <PhishingPage onNavigate={navigate} />;
       case 'steganography':
-        return <SteganographyPage />;
+        return <SteganographyPage onNavigate={navigate} />;
       default:
         return <LandingPage onNavigate={navigate} />;
     }
   };
 
   return (
-    <div className="app">
-      <Navbar currentPage={currentPage} onNavigate={navigate} />
+    <div className={`app ${theme}`}>
+      <Navbar 
+        currentPage={currentPage} 
+        onNavigate={navigate} 
+        theme={theme} 
+        toggleTheme={toggleTheme} 
+      />
       <main>{renderPage()}</main>
+      <Footer onNavigate={navigate} />
+      <FloatingChatbot />
     </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

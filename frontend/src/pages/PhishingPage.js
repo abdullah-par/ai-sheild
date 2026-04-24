@@ -3,6 +3,26 @@ import './PhishingPage.css';
 import * as api from '../services/api';
 import { transformURLScan, transformEmailScan } from '../services/transformers';
 
+/* ── UI Components ─────────────────────────── */
+
+const IconScan = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+  </svg>
+);
+
+const IconURL = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+  </svg>
+);
+
+const IconEmail = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+  </svg>
+);
+
 /* ── Animated Risk Meter ─────────────────────── */
 const RiskMeter = ({ risk, show }) => {
   const [val, setVal] = useState(0);
@@ -10,279 +30,204 @@ const RiskMeter = ({ risk, show }) => {
     if (!show) return;
     let v = 0;
     const t = setInterval(() => {
-      v = Math.min(v + 3, risk);
+      v = Math.min(v + 2, risk);
       setVal(v);
       if (v >= risk) clearInterval(t);
-    }, 20);
+    }, 15);
     return () => clearInterval(t);
   }, [show, risk]);
 
-  const color = val >= 70 ? '#ef4444' : val >= 40 ? '#f59e0b' : '#10b981';
-  const label = val >= 70 ? 'HIGH RISK' : val >= 40 ? 'MEDIUM' : 'LOW RISK';
+  const color = val >= 70 ? 'var(--accent-danger)' : val >= 40 ? 'var(--accent-warn)' : 'var(--accent-safe)';
+  const label = val >= 70 ? 'CRITICAL RISK' : val >= 40 ? 'SUSPICIOUS' : 'SECURE';
   const circ = 2 * Math.PI * 46;
+  
   return (
-    <div className="risk-meter">
-      <svg width="120" height="120" viewBox="0 0 120 120">
-        <circle cx="60" cy="60" r="46" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="10"/>
+    <div className="risk-meter-2">
+      <svg width="140" height="140" viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r="46" fill="none" stroke="var(--border-strong)" strokeWidth="8"/>
         <circle cx="60" cy="60" r="46" fill="none" stroke={color}
-          strokeWidth="10" strokeLinecap="round"
+          strokeWidth="8" strokeLinecap="round"
           strokeDasharray={circ} strokeDashoffset={circ - (val / 100) * circ}
           transform="rotate(-90 60 60)"
-          style={{ transition: 'stroke-dashoffset 0.05s linear', filter: `drop-shadow(0 0 6px ${color})` }}
+          style={{ transition: 'stroke-dashoffset 0.1s ease', filter: `drop-shadow(0 0 8px ${color}44)` }}
         />
-        <text x="60" y="55" textAnchor="middle" fill={color} fontSize="24" fontWeight="800" fontFamily="JetBrains Mono">{val}</text>
-        <text x="60" y="70" textAnchor="middle" fill="#475569" fontSize="9" fontFamily="Inter">/ 100</text>
+        <text x="60" y="58" textAnchor="middle" fill="var(--text-primary)" fontSize="28" fontWeight="800" fontFamily="var(--font-mono)">{val}</text>
+        <text x="60" y="74" textAnchor="middle" fill="var(--text-muted)" fontSize="10" fontWeight="700">SCORE</text>
       </svg>
-      <span className="rm-label" style={{ color }}>{label}</span>
+      <div className="rm-badge" style={{ backgroundColor: `${color}22`, color }}>{label}</div>
     </div>
   );
 };
 
 /* ── Result Panel ────────────────────────────── */
 const ResultPanel = ({ result, onClear }) => (
-  <div className={`ph-result ${result.isPhishing ? 'danger' : 'safe'}`}>
-    <div className="ph-result-header">
-      <div className="ph-verdict-badge">
-        {result.isPhishing ? '⚠️ PHISHING DETECTED' : '✅ APPEARS SAFE'}
+  <div className={`result-panel-2 glass ${result.isPhishing ? 'threat' : 'clean'}`}>
+    <div className="result-header-2">
+      <div className="verdict-wrapper">
+        <div className="verdict-title">{result.isPhishing ? 'Threat Identified' : 'Clean Analysis'}</div>
+        <div className="verdict-target">{result.target}</div>
       </div>
-      <button className="ph-clear-btn" onClick={onClear}>New Scan ✕</button>
+      <button className="btn-clear-2" onClick={onClear}>Dismiss Analysis</button>
     </div>
 
-    <div className="ph-result-grid">
-      <RiskMeter risk={result.risk} show />
-
-      <div className="ph-indicators">
-        <div className="ph-ind-title">Threat Indicators</div>
-        {result.indicators.map((ind, i) => (
-          <div key={i} className="ph-ind-row">
-            <span className="ph-ind-label">{ind.label}</span>
-            <span className={`ph-ind-val ph-ind-${ind.status}`}>{ind.value}</span>
-            <span className={`ph-ind-dot ph-dot-${ind.status}`} />
-          </div>
-        ))}
+    <div className="result-grid-2">
+      <div className="result-chart-area">
+        <RiskMeter risk={result.risk} show />
       </div>
 
-      <div className="ph-recs">
-        <div className="ph-ind-title">Recommendations</div>
-        {result.recs.map((r, i) => (
-          <div key={i} className="ph-rec-item">
-            <span className={`ph-rec-dot ${result.isPhishing ? 'rdanger' : 'rsafe'}`} />
-            {r}
-          </div>
-        ))}
-        <div className="ph-scan-target">
-          <span className="ph-target-label">SCANNED</span>
-          <span className="ph-target-val">{result.target}</span>
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-/* ── Error Banner ────────────────────────────── */
-const ErrorBanner = ({ message, onDismiss }) => (
-  <div className="ph-error-banner">
-    <span>⚠ {message}</span>
-    <button onClick={onDismiss}>✕</button>
-  </div>
-);
-
-/* ── URL Scanner ─────────────────────────────── */
-const URLScanner = ({ onResult, onError }) => {
-  const [url, setUrl] = useState('');
-  const [scanning, setScanning] = useState(false);
-
-  const scan = async () => {
-    if (!url) return;
-    setScanning(true);
-    try {
-      const data = await api.scanURL(url);
-      onResult(transformURLScan(data));
-    } catch (err) {
-      onError(err.message);
-    } finally {
-      setScanning(false);
-    }
-  };
-
-  return (
-    <div className="ph-input-wrap">
-      <div className="ph-url-bar">
-        <span className="ph-url-prefix">🔗</span>
-        <input
-          className="ph-url-input"
-          value={url}
-          onChange={e => setUrl(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && scan()}
-          placeholder="Paste a suspicious URL to scan…"
-          spellCheck={false}
-        />
-        <button className="ph-scan-btn" onClick={scan} disabled={!url || scanning}>
-          {scanning ? <span className="spin-ring" /> : 'Scan →'}
-        </button>
-      </div>
-
-      <div className="ph-example-row">
-        <span>Try:</span>
-        {['paypal-secure-login.ru','bank-update-now.xyz','apple-id-verify.cc','github.com'].map(ex => (
-          <button key={ex} className="ph-chip" onClick={() => setUrl(ex)}>{ex}</button>
-        ))}
-      </div>
-
-      {scanning && (
-        <div className="ph-scanning">
-          <div className="ph-scan-bar"><div className="ph-scan-fill" /></div>
-          <span>Running AI analysis on {url}…</span>
-        </div>
-      )}
-
-      <div className="ph-url-features">
-        {['Domain & WHOIS Lookup','SSL / TLS Validation','Blocklist Cross-check','Redirect Chain Analysis','Typosquatting Detection','AI Confidence Scoring'].map((f, i) => (
-          <div key={i} className="ph-url-feat">
-            <span className="ph-feat-dot" />
-            {f}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-/* ── Email Analyzer ──────────────────────────── */
-const EmailAnalyzer = ({ onResult, onError }) => {
-  const [mode, setMode] = useState('paste');
-  const [text, setText] = useState('');
-  const [file, setFile] = useState(null);
-  const [scanning, setScanning] = useState(false);
-  const [drag, setDrag] = useState(false);
-
-  const scan = async () => {
-    if (mode === 'paste' && !text) return;
-    if (mode === 'upload' && !file) return;
-    setScanning(true);
-    try {
-      const data = mode === 'paste'
-        ? await api.analyzeEmailText(text)
-        : await api.analyzeEmailFile(file);
-      onResult(transformEmailScan(data));
-    } catch (err) {
-      onError(err.message);
-    } finally {
-      setScanning(false);
-    }
-  };
-
-  return (
-    <div className="ph-input-wrap">
-      <div className="ph-mode-toggle">
-        <button className={mode === 'paste' ? 'active' : ''} onClick={() => setMode('paste')}>Paste Headers / Body</button>
-        <button className={mode === 'upload' ? 'active' : ''} onClick={() => setMode('upload')}>Upload .eml / .msg</button>
-      </div>
-
-      {mode === 'paste' ? (
-        <div className="ph-paste-wrap">
-          <textarea
-            className="ph-textarea"
-            value={text}
-            onChange={e => setText(e.target.value)}
-            placeholder={`From: sender@suspicious.com\nTo: victim@company.com\nSubject: Urgent: Verify Your Account Now!\n\nDear Customer, click here immediately to avoid account suspension…`}
-          />
-          <span className="ph-char-count">{text.length} chars</span>
-        </div>
-      ) : (
-        <div
-          className={`ph-drop ${drag ? 'drag-over' : ''} ${file ? 'has-file' : ''}`}
-          onDragOver={e => { e.preventDefault(); setDrag(true); }}
-          onDragLeave={() => setDrag(false)}
-          onDrop={e => { e.preventDefault(); setDrag(false); setFile(e.dataTransfer.files[0]); }}
-          onClick={() => document.getElementById('ph-file').click()}
-        >
-          <input id="ph-file" type="file" accept=".eml,.msg,.txt" style={{ display: 'none' }} onChange={e => setFile(e.target.files[0])} />
-          {file
-            ? <div className="ph-file-chosen">📄 {file.name} <span>({(file.size/1024).toFixed(1)} KB)</span></div>
-            : <><div className="ph-drop-icon">📥</div><p>Drop .eml / .msg file here</p><span>or click to browse</span></>}
-        </div>
-      )}
-
-      {scanning && (
-        <div className="ph-scanning">
-          <div className="ph-scan-bar"><div className="ph-scan-fill" /></div>
-          <span>Parsing headers and running SPF / DKIM / DMARC checks…</span>
-        </div>
-      )}
-
-      <button className="ph-analyze-btn" onClick={scan} disabled={scanning || (mode === 'paste' ? !text : !file)}>
-        {scanning ? 'Analyzing…' : 'Analyze Email →'}
-      </button>
-    </div>
-  );
-};
-
-/* ── Main Page ───────────────────────────────── */
-export default function PhishingPage() {
-  const [tab, setTab] = useState('url');
-  const [result, setResult] = useState(null);
-  const [apiError, setApiError] = useState(null);
-
-  return (
-    <div className="phishing-page">
-      <div className="ph-bg-glow" />
-      <div className="ph-grid-overlay" />
-
-      <div className="ph-container">
-        {/* Hero */}
-        <div className="ph-hero">
-          <div className="ph-hero-badge">
-            <span className="ph-badge-dot" />
-            PHISHING DETECTION ENGINE
-          </div>
-          <h1 className="ph-hero-title">
-            Phishing <span className="ph-gradient">Analyzer</span>
-          </h1>
-          <p className="ph-hero-sub">
-            Scan URLs and emails against AI threat models, blocklists, and
-            behavioral heuristics to detect phishing attempts in real time.
-          </p>
-          <div className="ph-hero-stats">
-            {[['99.2%','Detection Rate'],['< 1s','Analysis Time'],['50M+','Patterns Trained']].map(([v,l]) => (
-              <div key={l} className="ph-stat"><span className="ph-stat-val">{v}</span><span className="ph-stat-label">{l}</span></div>
+      <div className="result-data-area">
+        <div className="data-section">
+          <div className="section-label-2">Analysis Indicators</div>
+          <div className="indicators-list">
+            {result.indicators.map((ind, i) => (
+              <div key={i} className="indicator-row">
+                <span className="ind-label">{ind.label}</span>
+                <span className={`ind-status status-${ind.status}`}>{ind.value}</span>
+              </div>
             ))}
           </div>
         </div>
 
-        {/* Analyzer Card */}
+        <div className="data-section">
+          <div className="section-label-2">Forensic Recommendations</div>
+          <div className="recs-list">
+            {result.recs.map((r, i) => (
+              <div key={i} className="rec-row">
+                <span className="rec-bullet" />
+                {r}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+/* ── Main Page ───────────────────────────────── */
+export default function PhishingPage() {
+  const [tab, setTab] = useState('url');
+  const [url, setUrl] = useState('');
+  const [emailText, setEmailText] = useState('');
+  const [scanning, setScanning] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+
+  const handleScan = async () => {
+    setScanning(true);
+    setError(null);
+    try {
+      if (tab === 'url') {
+        const data = await api.scanURL(url);
+        setResult(transformURLScan(data));
+      } else {
+        const data = await api.analyzeEmailText(emailText);
+        setResult(transformEmailScan(data));
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  return (
+    <div className="phishing-page-2">
+      <div className="ph-grid-2" />
+      
+      <div className="ph-container-2">
+        <header className="ph-header-2">
+          <div className="ph-badge-2">PHISHING FORENSICS</div>
+          <h1 className="ph-title-2">Threat Intelligence Engine</h1>
+          <p className="ph-desc-2">
+            Professional-grade analysis of suspicious domains and email headers.
+            Identify spoofing, malicious redirects, and behavioral threat patterns.
+          </p>
+        </header>
+
         {result ? (
           <ResultPanel result={result} onClear={() => setResult(null)} />
         ) : (
-          <div className="ph-card">
-            <div className="ph-tabs">
-              <button className={`ph-tab ${tab === 'url' ? 'active' : ''}`} onClick={() => setTab('url')}>
-                <span>🌐</span> URL Scanner
+          <div className="ph-analyzer-card glass">
+            <div className="ph-tabs-2">
+              <button className={tab === 'url' ? 'active' : ''} onClick={() => setTab('url')}>
+                <IconURL /> URL SCANNER
               </button>
-              <button className={`ph-tab ${tab === 'email' ? 'active' : ''}`} onClick={() => setTab('email')}>
-                <span>📧</span> Email Analyzer
+              <button className={tab === 'email' ? 'active' : ''} onClick={() => setTab('email')}>
+                <IconEmail /> EMAIL ANALYZER
               </button>
             </div>
 
-            {apiError && <ErrorBanner message={apiError} onDismiss={() => setApiError(null)} />}
-            {tab === 'url'   && <URLScanner    onResult={setResult} onError={setApiError} />}
-            {tab === 'email' && <EmailAnalyzer onResult={setResult} onError={setApiError} />}
+            <div className="ph-input-area-2">
+              {tab === 'url' ? (
+                <div className="url-input-wrap-2">
+                  <div className="input-group-2">
+                    <input 
+                      type="text" 
+                      placeholder="Enter target URL for reputation analysis..."
+                      value={url}
+                      onChange={(e) => setUrl(e.target.value)}
+                    />
+                    <button className="btn-scan-2" onClick={handleScan} disabled={!url || scanning}>
+                      {scanning ? 'SCANNING...' : <><IconScan /> ANALYZE</>}
+                    </button>
+                  </div>
+                  <div className="input-examples-2">
+                    <span>Quick Test:</span>
+                    <button onClick={() => setUrl('secure-login.xyz')}>secure-login.xyz</button>
+                    <button onClick={() => setUrl('bank-alert-update.ru')}>bank-alert-update.ru</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="email-input-wrap-2">
+                  <textarea 
+                    className="code-editor-style"
+                    placeholder="Paste raw email headers or body here..."
+                    value={emailText}
+                    onChange={(e) => setEmailText(e.target.value)}
+                  />
+                  <div className="email-actions-2">
+                    <div className="editor-info">MONITORING HEADER FLOW</div>
+                    <button className="btn-scan-2" onClick={handleScan} disabled={!emailText || scanning}>
+                      {scanning ? 'SCANNING...' : <><IconScan /> RUN FORENSICS</>}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {error && <div className="ph-error-2">⚠ ANALYSIS ERROR: {error}</div>}
           </div>
         )}
 
-        {/* Info Row */}
-        <div className="ph-info-row">
-          {[
-            { icon: '🔍', title: 'Deep URL Inspection', desc: 'WHOIS, DNS, redirect chains, certificate validity and domain reputation checked simultaneously.' },
-            { icon: '📬', title: 'Email Header Forensics', desc: 'SPF, DKIM, DMARC authentication checks plus spoofing detection and link extraction.' },
-            { icon: '🤖', title: 'AI Confidence Scoring', desc: 'Multi-layer ML model trained on 50M+ phishing samples gives a 0–100 risk score instantly.' },
-          ].map((c, i) => (
-            <div key={i} className="ph-info-card">
-              <div className="ph-info-icon">{c.icon}</div>
-              <h3>{c.title}</h3>
-              <p>{c.desc}</p>
+        <div className="ph-features-row-2">
+          <div className="ph-feature-2">
+            <div className="ph-f-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+              </svg>
             </div>
-          ))}
+            <h4>Domain Intelligence</h4>
+            <p>Recursive analysis of registrar data, SSL validity, and redirection chains.</p>
+          </div>
+          <div className="ph-feature-2">
+            <div className="ph-f-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+              </svg>
+            </div>
+            <h4>Header Forensics</h4>
+            <p>Verification of SPF, DKIM, and DMARC alignments to identify spoofing attempts.</p>
+          </div>
+          <div className="ph-feature-2">
+            <div className="ph-f-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/>
+              </svg>
+            </div>
+            <h4>Heuristic Scoring</h4>
+            <p>Probability-based risk assessment powered by our proprietary threat models.</p>
+          </div>
         </div>
       </div>
     </div>

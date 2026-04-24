@@ -1,0 +1,41 @@
+Question,Answer
+What is CodeJay?,"CodeJay is a YouTube channel that creates informative and project-based videos on data science, machine learning, artificial intelligence, and related technologies."
+What type of videos does CodeJay make?,"CodeJay produces videos on data science concepts, end-to-end machine learning projects, deep learning, NLP, and practical implementation tutorials."
+Who is the target audience of CodeJay?,"Our target audience includes students, working professionals, and data enthusiasts interested in learning and implementing data science."
+Can I request a video topic on CodeJay?,"Yes, you can! Drop your suggestions in the comments or reach out through our contact form or social media."
+Which programming languages are covered in CodeJay videos?,"Primarily Python is used in our tutorials, as it is widely used in data science and machine learning."
+Does CodeJay provide source code for projects?,"Yes, we provide GitHub links to the source code in the video description."
+How can I stay updated with CodeJay’s latest videos?,Subscribe to our YouTube channel and turn on notifications to get updates on new videos.
+Do you cover real-world data science projects?,Absolutely! Our focus is on end-to-end real-world projects that provide hands-on experience.
+Are the projects beginner-friendly?,"Yes, we create projects for all levels—beginner, intermediate, and advanced—with clear step-by-step explanations."
+What tools and libraries are used in CodeJay tutorials?,"We use tools like Jupyter Notebook, Google Colab, and libraries such as Pandas, Scikit-learn, TensorFlow, PyTorch, and OpenAI."
+Does CodeJay offer tutorials on deep learning?,"Yes, we cover deep learning topics including CNNs, RNNs, LSTMs, and Transformers."
+Can I learn NLP from CodeJay?,"Yes, we have several NLP projects and concept videos, including text classification, sentiment analysis, and chatbot development."
+What is a good project for beginners in data science?,"A good starting project could be Titanic survival prediction, house price prediction, or basic EDA on a public dataset."
+Do you have a playlist for machine learning projects?,"Yes, we have curated playlists for machine learning projects on our YouTube channel. Check the “Machine Learning Projects” playlist."
+How do I run your projects on my system?,Most of our projects can be run using Jupyter Notebook or Google Colab. We provide setup instructions in each video.
+Can I collaborate with CodeJay on projects?,We’re open to collaborations. Reach out via our contact page or through LinkedIn.
+How do I contact CodeJay?,"You can reach us via email, YouTube comments, or connect through our LinkedIn page."
+Are CodeJay videos free to access?,"Yes, all our educational content on YouTube is freely accessible."
+Does CodeJay provide career guidance?,"Occasionally, we share videos on career tips, resume building, and interview preparation for data science roles."
+Where can I find the CodeJay GitHub repository?,"The GitHub link is shared in each video description. You can also find it by searching ""CodeJay GitHub"" on Google."
+What is the best way to start learning data science?,"Start with Python, learn basic statistics, and practice using publicly available datasets on platforms like Kaggle."
+Does CodeJay explain theory or just projects?,We cover both theory and practical implementation to give you a complete understanding of each topic.
+Are there tutorials on model deployment?,"Yes, we have videos showing how to deploy machine learning models using Flask, Streamlit, and cloud platforms."
+What are some intermediate-level data science projects?,"Projects like customer segmentation, recommendation systems, and fraud detection are ideal for intermediate learners."
+Can I learn about AI tools on CodeJay?,"Yes, we create tutorials on trending AI tools like ChatGPT, LangChain, and other generative AI technologies."
+Do you teach how to clean and preprocess data?,"Yes, we have dedicated videos on data preprocessing, handling missing values, outliers, and feature engineering."
+What are some good deep learning projects?,"Try image classification, face recognition, or building an LSTM-based time series forecasting model."
+Does CodeJay cover time series analysis?,"Yes, we provide content on time series forecasting using ARIMA, Prophet, and LSTM."
+Can I learn how to use APIs in Python from CodeJay?,"Yes, we have tutorials on how to fetch data using APIs and integrate them into data science projects."
+Is there any guidance on interview preparation?,"Yes, we cover common interview questions and mock interview sessions for data science roles."
+Does CodeJay provide project ideas?,"Yes, every month we release videos on trending and innovative project ideas in data science."
+How frequently does CodeJay upload videos?,"We aim to upload new content every week, covering various topics and technologies."
+Do you explain data visualization libraries?,"Yes, we cover libraries like Matplotlib, Seaborn, Plotly, and Power BI for visualization."
+Are your tutorials beginner-friendly?,"Yes, we break down complex topics into simple explanations suitable for beginners."
+Do you teach cloud platforms like AWS or GCP?,"Yes, we include tutorials on using cloud services for data science model deployment and storage."
+Does CodeJay provide quizzes or assessments?,"Currently, we do not offer quizzes, but we are planning to include them in future content updates."
+Can I access the videos offline?,YouTube allows downloading videos for offline access in certain regions if you're a premium member.
+Do you teach web scraping?,"Yes, we have tutorials using BeautifulSoup, Scrapy, and Selenium for data extraction from websites."
+Is there content on unsupervised learning?,"Yes, we explain concepts like clustering, dimensionality reduction, and anomaly detection."
+How can I give feedback to CodeJay?,You can comment on our videos or contact us via social media or email for suggestions and feedback.

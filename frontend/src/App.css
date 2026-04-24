@@ -1,7 +1,8 @@
-/* App.css – minimal shell styles */
 .app {
   min-height: 100vh;
-  background-color: #020408;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 main {

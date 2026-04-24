@@ -3,26 +3,42 @@ const BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
 const handleResponse = async (res) => {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.message || `Request failed (${res.status})`);
+    throw new Error(body.detail || body.message || `Request failed (${res.status})`);
   }
   return res.json();
 };
 
-const post = (url, body, isForm = false) =>
+const getToken = () => localStorage.getItem('token');
+
+const getHeaders = (isForm = false) => {
+  const headers = {};
+  if (!isForm) {
+    headers['Content-Type'] = 'application/json';
+  }
+  const token = getToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+};
+
+export const post = (url, body, isForm = false) =>
   fetch(`${BASE}${url}`, {
     method: 'POST',
-    ...(isForm
-      ? { body }
-      : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+    headers: getHeaders(isForm),
+    body: isForm ? body : JSON.stringify(body),
   }).then(handleResponse);
 
-const get = (url) => fetch(`${BASE}${url}`).then(handleResponse);
+export const get = (url) =>
+  fetch(`${BASE}${url}`, {
+    headers: getHeaders(),
+  }).then(handleResponse);
 
 /* ── Phishing ─────────────────────────────── */
 export const scanURL = (url) => post('/phishing/scan-url', { url });
 
 export const analyzeEmailText = (rawEmail) =>
-  post('/phishing/analyze-email', { raw_email: rawEmail });
+  post('/phishing/analyze-email-text', { raw_email: rawEmail });
 
 export const analyzeEmailFile = (file) => {
   const fd = new FormData();
@@ -36,6 +52,9 @@ export const analyzeImage = (file) => {
   fd.append('file', file);
   return post('/steganography/analyze', fd, true);
 };
+
+/* ── Chatbot ──────────────────────────────── */
+export const askChatbot = (question) => post('/chatbot/ask', { question });
 
 /* ── Dashboard ────────────────────────────── */
 export const getScanHistory = (params = {}) => {

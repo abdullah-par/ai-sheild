@@ -1,0 +1,36 @@
+# Environments
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+backend/.env
+frontend/.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Node
+node_modules/
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Databases
+*.sqlite3
+backend/test.db
+backend/ai_shield.db
+
+# Large files/Data (Optional but recommended if they are large)
+# backend/data/
+# backend/models/*.pkl

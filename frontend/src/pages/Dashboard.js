@@ -15,7 +15,8 @@ const BarChart = ({ data }) => {
               className="bar-fill"
               style={{
                 height: `${(d.value / max) * 100}%`,
-                background: d.threat ? 'rgba(239,68,68,0.7)' : 'rgba(0,212,255,0.5)',
+                background: d.threat ? 'var(--accent-danger)' : 'var(--accent-primary)',
+                opacity: 0.8,
                 animationDelay: `${i * 60}ms`,
               }}
             />
@@ -59,10 +60,10 @@ const DonutChart = ({ segments }) => {
             />
           );
         })}
-        <text x={cx} y={cy - 6} textAnchor="middle" fill="#f0f6ff" fontSize="22" fontWeight="800" fontFamily="JetBrains Mono">
+        <text x={cx} y={cy - 6} textAnchor="middle" fill="var(--text-primary)" fontSize="22" fontWeight="800" fontFamily="var(--font-mono)">
           {total}
         </text>
-        <text x={cx} y={cy + 12} textAnchor="middle" fill="#475569" fontSize="10" fontFamily="Inter">
+        <text x={cx} y={cy + 12} textAnchor="middle" fill="var(--text-secondary)" fontSize="10" fontFamily="var(--font-sans)">
           Total Scans
         </text>
       </svg>
@@ -80,13 +81,13 @@ const DonutChart = ({ segments }) => {
 };
 
 /* ── Scan History Table ──────────────────────── */
-const scanHistory = [];  // populated from API
+
 
 const statusColors = {
-  Phishing:   { bg: 'rgba(239,68,68,0.12)',  text: '#ef4444',  dot: '#ef4444' },
-  Stego:      { bg: 'rgba(139,92,246,0.12)', text: '#8b5cf6',  dot: '#8b5cf6' },
-  Safe:       { bg: 'rgba(16,185,129,0.12)', text: '#10b981',  dot: '#10b981' },
-  Suspicious: { bg: 'rgba(245,158,11,0.12)', text: '#f59e0b',  dot: '#f59e0b' },
+  Phishing:   { bg: 'rgba(239,68,68,0.1)',  text: 'var(--accent-danger)', dot: 'var(--accent-danger)' },
+  Stego:      { bg: 'rgba(14,165,233,0.1)', text: 'var(--accent-secondary)', dot: 'var(--accent-secondary)' },
+  Safe:       { bg: 'rgba(16,185,129,0.1)', text: 'var(--accent-safe)',   dot: 'var(--accent-safe)' },
+  Suspicious: { bg: 'rgba(245,158,11,0.1)',  text: 'var(--accent-warn)',   dot: 'var(--accent-warn)' },
 };
 
 const typeIcons = {
@@ -164,7 +165,7 @@ const Dashboard = ({ onNavigate }) => {
           <div style={{ fontSize: 40, marginBottom: 16 }}>⚠️</div>
           <div style={{ fontSize: 15, marginBottom: 8, color: '#94a3b8', fontWeight: 600 }}>Could not reach the API</div>
           <div style={{ fontSize: 13, fontFamily: 'JetBrains Mono, monospace', color: '#475569' }}>{error}</div>
-          <div style={{ marginTop: 12, fontSize: 12, color: '#334155' }}>Make sure the backend is running at {process.env.REACT_APP_API_URL || 'http://localhost:8000'}</div>
+          <div style={{ marginTop: 12, fontSize: 12, color: '#334155' }}>Make sure the backend is running at <strong>{process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1'}</strong></div>
         </div>
       </div>
     </div>
@@ -190,10 +191,10 @@ const Dashboard = ({ onNavigate }) => {
 
         {/* Stats Row */}
         <div className="stats-row">
-          <StatCard icon="🛡️" label="Total Scans"    value={stats?.totalScans ?? '—'}  change="this session" changePos color="#00d4ff" />
-          <StatCard icon="⚠️" label="Threats Found"  value={stats?.threatsFound ?? '—'} change="detected"     changePos color="#ef4444" />
-          <StatCard icon="✅" label="Clean Scans"    value={stats?.cleanScans ?? '—'}   change="verified safe" changePos color="#10b981" />
-          <StatCard icon="📊" label="Avg Risk Score" value={stats?.avgRiskScore ?? '—'} change="/ 100"        changePos={false} color="#f59e0b" />
+          <StatCard icon="🛡️" label="Total Scans"    value={stats?.totalScans ?? '—'}  change="this session" changePos color="var(--accent-primary)" />
+          <StatCard icon="⚠️" label="Threats Found"  value={stats?.threatsFound ?? '—'} change="detected"     changePos color="var(--accent-danger)" />
+          <StatCard icon="✅" label="Clean Scans"    value={stats?.cleanScans ?? '—'}   change="verified safe" changePos color="var(--accent-safe)" />
+          <StatCard icon="📊" label="Avg Risk Score" value={stats?.avgRiskScore ?? '—'} change="/ 100"        changePos={false} color="var(--accent-warn)" />
         </div>
 
         {/* Charts Row */}
@@ -205,8 +206,8 @@ const Dashboard = ({ onNavigate }) => {
             </div>
             <BarChart data={weekData} />
             <div className="chart-legend-row">
-              <div className="cl-item"><div className="cl-dot" style={{ background: 'rgba(0,212,255,0.5)' }}/> Clean</div>
-              <div className="cl-item"><div className="cl-dot" style={{ background: 'rgba(239,68,68,0.7)' }}/> Threat</div>
+              <div className="cl-item"><div className="cl-dot" style={{ background: 'var(--accent-primary)' }}/> Clean</div>
+              <div className="cl-item"><div className="cl-dot" style={{ background: 'var(--accent-danger)' }}/> Threat</div>
             </div>
           </div>
 
