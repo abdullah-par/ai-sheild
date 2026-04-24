@@ -1,0 +1,9 @@
+/* App.css – minimal shell styles */
+.app {
+  min-height: 100vh;
+  background-color: #020408;
+}
+
+main {
+  position: relative;
+}

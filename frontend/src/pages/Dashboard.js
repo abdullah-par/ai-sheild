@@ -1,0 +1,318 @@
+import React, { useState, useEffect } from 'react';
+import './Dashboard.css';
+import { getStats, getWeeklyStats, getScanHistory } from '../services/api';
+import { transformStats, transformWeekly, transformHistory } from '../services/transformers';
+
+/* ── Mini Bar Chart ─────────────────────────── */
+const BarChart = ({ data }) => {
+  const max = Math.max(...data.map(d => d.value));
+  return (
+    <div className="bar-chart">
+      {data.map((d, i) => (
+        <div key={i} className="bar-col">
+          <div className="bar-wrap">
+            <div
+              className="bar-fill"
+              style={{
+                height: `${(d.value / max) * 100}%`,
+                background: d.threat ? 'rgba(239,68,68,0.7)' : 'rgba(0,212,255,0.5)',
+                animationDelay: `${i * 60}ms`,
+              }}
+            />
+          </div>
+          <span className="bar-label">{d.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+/* ── Threat Donut ───────────────────────────── */
+const DonutChart = ({ segments }) => {
+  const total = segments.reduce((s, seg) => s + seg.value, 0);
+  let cumulativePercent = 0;
+  const r = 52;
+  const cx = 70;
+  const cy = 70;
+  const circumference = 2 * Math.PI * r;
+
+  return (
+    <div className="donut-wrap">
+      <svg width="140" height="140" viewBox="0 0 140 140">
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="14"/>
+        {segments.map((seg, i) => {
+          const pct = seg.value / total;
+          const dashArray = `${circumference * pct} ${circumference * (1 - pct)}`;
+          const offset = circumference * (1 - cumulativePercent);
+          cumulativePercent += pct;
+          return (
+            <circle
+              key={i}
+              cx={cx} cy={cy} r={r}
+              fill="none"
+              stroke={seg.color}
+              strokeWidth="14"
+              strokeDasharray={dashArray}
+              strokeDashoffset={offset}
+              transform={`rotate(-90 ${cx} ${cy})`}
+              style={{ filter: `drop-shadow(0 0 4px ${seg.color}44)` }}
+            />
+          );
+        })}
+        <text x={cx} y={cy - 6} textAnchor="middle" fill="#f0f6ff" fontSize="22" fontWeight="800" fontFamily="JetBrains Mono">
+          {total}
+        </text>
+        <text x={cx} y={cy + 12} textAnchor="middle" fill="#475569" fontSize="10" fontFamily="Inter">
+          Total Scans
+        </text>
+      </svg>
+      <div className="donut-legend">
+        {segments.map((seg, i) => (
+          <div key={i} className="legend-item">
+            <div className="legend-dot" style={{ background: seg.color }} />
+            <span>{seg.label}</span>
+            <span className="legend-val">{seg.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/* ── Scan History Table ──────────────────────── */
+const scanHistory = [];  // populated from API
+
+const statusColors = {
+  Phishing:   { bg: 'rgba(239,68,68,0.12)',  text: '#ef4444',  dot: '#ef4444' },
+  Stego:      { bg: 'rgba(139,92,246,0.12)', text: '#8b5cf6',  dot: '#8b5cf6' },
+  Safe:       { bg: 'rgba(16,185,129,0.12)', text: '#10b981',  dot: '#10b981' },
+  Suspicious: { bg: 'rgba(245,158,11,0.12)', text: '#f59e0b',  dot: '#f59e0b' },
+};
+
+const typeIcons = {
+  URL:   '🌐',
+  Email: '📧',
+  Image: '🖼️',
+};
+
+/* ── Stat Card ──────────────────────────────── */
+const StatCard = ({ icon, label, value, change, changePos, color }) => (
+  <div className="stat-card">
+    <div className="stat-icon" style={{ background: `${color}18`, color }}>{icon}</div>
+    <div className="stat-info">
+      <div className="stat-value">{value}</div>
+      <div className="stat-label">{label}</div>
+    </div>
+    <div className={`stat-change ${changePos ? 'pos' : 'neg'}`}>
+      {changePos ? '↑' : '↓'} {change}
+    </div>
+  </div>
+);
+
+/* ── Dashboard ───────────────────────────────── */
+const Dashboard = ({ onNavigate }) => {
+  const [filter, setFilter] = useState('all');
+
+  // ── API Data State ───────────────────────────
+  const [stats, setStats]     = useState(null);
+  const [weekData, setWeek]   = useState([]);
+  const [donutData, setDonut] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState(null);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [s, w, h] = await Promise.all([
+          getStats(),
+          getWeeklyStats(),
+          getScanHistory({ limit: 20 }),
+        ]);
+        setStats(transformStats(s));
+        setWeek(transformWeekly(w));
+        setDonut(transformStats(s).donut);
+        setHistory(transformHistory(h));
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  const filtered = filter === 'all'
+    ? history
+    : history.filter(s => s.status.toLowerCase() === filter);
+
+  if (loading) return (
+    <div className="dashboard">
+      <div className="dash-container" style={{ alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <div style={{ textAlign: 'center', color: '#475569' }}>
+          <div style={{ fontSize: 40, marginBottom: 16 }}>🛡️</div>
+          <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>Loading threat intelligence…</div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (error) return (
+    <div className="dashboard">
+      <div className="dash-container" style={{ alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <div style={{ textAlign: 'center', color: '#64748b', maxWidth: 440 }}>
+          <div style={{ fontSize: 40, marginBottom: 16 }}>⚠️</div>
+          <div style={{ fontSize: 15, marginBottom: 8, color: '#94a3b8', fontWeight: 600 }}>Could not reach the API</div>
+          <div style={{ fontSize: 13, fontFamily: 'JetBrains Mono, monospace', color: '#475569' }}>{error}</div>
+          <div style={{ marginTop: 12, fontSize: 12, color: '#334155' }}>Make sure the backend is running at {process.env.REACT_APP_API_URL || 'http://localhost:8000'}</div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="dashboard">
+      <div className="dash-container">
+        {/* Header */}
+        <div className="dash-header">
+          <div>
+            <div className="dash-breadcrumb">Dashboard</div>
+            <h1 className="dash-title">Threat Intelligence <span className="gradient-text">Overview</span></h1>
+          </div>
+          <button className="btn-primary" onClick={() => onNavigate('scan')}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="7" cy="7" r="4.5" stroke="white" strokeWidth="1.5"/>
+              <path d="M12 12l-2.5-2.5" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            New Scan
+          </button>
+        </div>
+
+        {/* Stats Row */}
+        <div className="stats-row">
+          <StatCard icon="🛡️" label="Total Scans"    value={stats?.totalScans ?? '—'}  change="this session" changePos color="#00d4ff" />
+          <StatCard icon="⚠️" label="Threats Found"  value={stats?.threatsFound ?? '—'} change="detected"     changePos color="#ef4444" />
+          <StatCard icon="✅" label="Clean Scans"    value={stats?.cleanScans ?? '—'}   change="verified safe" changePos color="#10b981" />
+          <StatCard icon="📊" label="Avg Risk Score" value={stats?.avgRiskScore ?? '—'} change="/ 100"        changePos={false} color="#f59e0b" />
+        </div>
+
+        {/* Charts Row */}
+        <div className="charts-row">
+          <div className="chart-card">
+            <div className="chart-header">
+              <div className="chart-title">Weekly Scan Volume</div>
+              <div className="chart-badge">Last 7 Days</div>
+            </div>
+            <BarChart data={weekData} />
+            <div className="chart-legend-row">
+              <div className="cl-item"><div className="cl-dot" style={{ background: 'rgba(0,212,255,0.5)' }}/> Clean</div>
+              <div className="cl-item"><div className="cl-dot" style={{ background: 'rgba(239,68,68,0.7)' }}/> Threat</div>
+            </div>
+          </div>
+
+          <div className="chart-card">
+            <div className="chart-header">
+              <div className="chart-title">Threat Breakdown</div>
+              <div className="chart-badge">All Time</div>
+            </div>
+            <DonutChart segments={donutData} />
+          </div>
+
+          {/* Live Feed */}
+          <div className="chart-card live-feed">
+            <div className="chart-header">
+              <div className="chart-title">Live Threat Feed</div>
+              <div className="live-indicator">
+                <div className="live-dot" />
+                LIVE
+              </div>
+            </div>
+            <div className="feed-items">
+              {[
+                { msg: 'Phishing URL blocked', target: 'free-gift-cards.xyz', time: '2s', color: '#ef4444' },
+                { msg: 'Stego detected', target: 'document_scan.png', time: '14s', color: '#8b5cf6' },
+                { msg: 'Clean URL verified', target: 'stripe.com', time: '31s', color: '#10b981' },
+                { msg: 'Email flagged', target: 'hr-update@companyy.com', time: '58s', color: '#f59e0b' },
+                { msg: 'Phishing URL blocked', target: 'security-alert.net', time: '1m', color: '#ef4444' },
+              ].map((f, i) => (
+                <div key={i} className="feed-item">
+                  <div className="feed-dot" style={{ background: f.color, boxShadow: `0 0 6px ${f.color}` }}/>
+                  <div className="feed-content">
+                    <span className="feed-msg">{f.msg}</span>
+                    <span className="feed-target">{f.target}</span>
+                  </div>
+                  <span className="feed-time">{f.time} ago</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Scan History */}
+        <div className="history-card">
+          <div className="history-header">
+            <div className="chart-title">Scan History</div>
+            <div className="history-filters">
+              {['all', 'phishing', 'stego', 'safe', 'suspicious'].map(f => (
+                <button
+                  key={f}
+                  className={`filter-btn ${filter === f ? 'active' : ''}`}
+                  onClick={() => setFilter(f)}
+                >
+                  {f.charAt(0).toUpperCase() + f.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="history-table">
+            <div className="table-head">
+              <div>ID</div>
+              <div>Type</div>
+              <div>Target</div>
+              <div>Risk</div>
+              <div>Status</div>
+              <div>Time</div>
+            </div>
+            {filtered.map((scan, i) => {
+              const st = statusColors[scan.status];
+              return (
+                <div key={i} className="table-row">
+                  <div className="td-id">{scan.id}</div>
+                  <div className="td-type">
+                    <span>{typeIcons[scan.type]}</span>
+                    {scan.type}
+                  </div>
+                  <div className="td-target">{scan.target}</div>
+                  <div className="td-risk">
+                    <div className="risk-pill">
+                      <div
+                        className="risk-bar"
+                        style={{
+                          width: `${scan.risk}%`,
+                          background: scan.risk >= 70 ? '#ef4444' : scan.risk >= 40 ? '#f59e0b' : '#10b981',
+                        }}
+                      />
+                    </div>
+                    <span style={{ color: scan.risk >= 70 ? '#ef4444' : scan.risk >= 40 ? '#f59e0b' : '#10b981' }}>
+                      {scan.risk}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="status-badge" style={{ background: st.bg, color: st.text }}>
+                      <div className="status-dot" style={{ background: st.dot }} />
+                      {scan.status}
+                    </span>
+                  </div>
+                  <div className="td-time">{scan.time}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Dashboard;
