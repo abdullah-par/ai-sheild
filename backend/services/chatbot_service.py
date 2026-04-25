@@ -1,13 +1,22 @@
 import os
 import logging
 from typing import Optional
-from langchain_groq import ChatGroq
-from langchain_community.document_loaders import CSVLoader
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain.prompts import PromptTemplate
-from langchain.chains import RetrievalQA
-from langchain_community.vectorstores import FAISS
 from dotenv import load_dotenv
+
+try:
+    from langchain_groq import ChatGroq
+    from langchain_huggingface import HuggingFaceEmbeddings
+    from langchain.prompts import PromptTemplate
+    from langchain.chains import RetrievalQA
+    from langchain_community.vectorstores import FAISS
+    LANGCHAIN_IMPORT_ERROR = None
+except Exception as import_error:
+    ChatGroq = None
+    HuggingFaceEmbeddings = None
+    PromptTemplate = None
+    RetrievalQA = None
+    FAISS = None
+    LANGCHAIN_IMPORT_ERROR = str(import_error)
 
 load_dotenv()
 
@@ -25,6 +34,9 @@ _embedder = None
 
 def get_embedder():
     global _embedder
+    if LANGCHAIN_IMPORT_ERROR:
+        logger.error(f"LangChain components unavailable: {LANGCHAIN_IMPORT_ERROR}")
+        return None
     if _embedder is None:
         try:
             _embedder = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
@@ -37,6 +49,10 @@ def get_qa_chain():
     global _qa_chain
     if _qa_chain is not None:
         return _qa_chain
+
+    if LANGCHAIN_IMPORT_ERROR:
+        logger.error(f"Chatbot dependencies are unavailable: {LANGCHAIN_IMPORT_ERROR}")
+        return None
 
     groq_api_key = os.getenv("groq_api_key")
     if not groq_api_key:

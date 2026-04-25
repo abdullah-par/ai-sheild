@@ -131,3 +131,95 @@ def _fallback_result(filename: str) -> Dict[str, Any]:
         },
         "recommendations": ["Could not read image — check file format"],
     }
+
+
+def encode_text(content: bytes, text: str) -> bytes:
+    if not PIL_AVAILABLE:
+        raise Exception("Pillow is not installed")
+    
+    img = Image.open(io.BytesIO(content)).convert("RGB")
+    new_img = img.copy()
+    
+    # Generate binary data
+    datalist = [format(ord(i), '08b') for i in text]
+    lendata = len(datalist)
+    
+    # Flatten pixels
+    pix = list(new_img.getdata())
+    imdata = iter(pix)
+    
+    modified_pixels = []
+    
+    for i in range(lendata):
+        try:
+            # Extract 3 pixels at a time (9 values)
+            p1 = next(imdata)
+            p2 = next(imdata)
+            p3 = next(imdata)
+        except StopIteration:
+            raise Exception("Image too small to hold the text")
+            
+        current_pix = list(p1[:3] + p2[:3] + p3[:3])
+        
+        # Modify first 8 values based on data bits
+        for j in range(0, 8):
+            if datalist[i][j] == '0' and current_pix[j] % 2 != 0:
+                current_pix[j] -= 1
+            elif datalist[i][j] == '1' and current_pix[j] % 2 == 0:
+                current_pix[j] -= 1
+                
+        # 9th value indicates stop (1) or continue (0)
+        if i == lendata - 1:
+            if current_pix[-1] % 2 == 0:
+                current_pix[-1] -= 1
+        else:
+            if current_pix[-1] % 2 != 0:
+                current_pix[-1] -= 1
+                
+        modified_pixels.append(tuple(current_pix[0:3]))
+        modified_pixels.append(tuple(current_pix[3:6]))
+        modified_pixels.append(tuple(current_pix[6:9]))
+        
+    # Append remaining pixels
+    for p in imdata:
+        modified_pixels.append(p)
+        
+    new_img.putdata(modified_pixels)
+    
+    out_io = io.BytesIO()
+    # Force PNG to avoid lossy compression breaking LSB
+    new_img.save(out_io, format="PNG")
+    return out_io.getvalue()
+
+
+def decode_text(content: bytes) -> str:
+    if not PIL_AVAILABLE:
+        raise Exception("Pillow is not installed")
+        
+    img = Image.open(io.BytesIO(content)).convert("RGB")
+    data = ''
+    imgdata = iter(img.getdata())
+    
+    while True:
+        try:
+            p1 = next(imgdata)
+            p2 = next(imgdata)
+            p3 = next(imgdata)
+        except StopIteration:
+            break
+            
+        pixels = list(p1[:3] + p2[:3] + p3[:3])
+        binstr = ''
+        
+        for i in pixels[:8]:
+            if i % 2 == 0:
+                binstr += '0'
+            else:
+                binstr += '1'
+                
+        data += chr(int(binstr, 2))
+        if pixels[-1] % 2 != 0:
+            return data
+            
+    return data
+

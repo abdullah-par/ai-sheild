@@ -77,7 +77,7 @@ const ResultPanel = ({ result, onClear }) => (
 
       <div className="result-data-area">
         <div className="data-section">
-          <div className="section-label-2">Analysis Indicators</div>
+          <div className="section-label-2">ML Model Indicators</div>
           <div className="indicators-list">
             {result.indicators.map((ind, i) => (
               <div key={i} className="indicator-row">
@@ -89,7 +89,25 @@ const ResultPanel = ({ result, onClear }) => (
         </div>
 
         <div className="data-section">
-          <div className="section-label-2">Forensic Recommendations</div>
+          <div className="section-label-2">Analysis Metadata</div>
+          <div className="indicators-list">
+            <div className="indicator-row">
+              <span className="ind-label">Scan ID</span>
+              <span className="ind-status status-safe">{result.scanId}</span>
+            </div>
+            <div className="indicator-row">
+              <span className="ind-label">Confidence</span>
+              <span className="ind-status status-safe">{result.confidence}%</span>
+            </div>
+            <div className="indicator-row">
+              <span className="ind-label">Analysis Time</span>
+              <span className="ind-status status-safe">{result.scanTime}s</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="data-section">
+          <div className="section-label-2">Security Recommendations</div>
           <div className="recs-list">
             {result.recs.map((r, i) => (
               <div key={i} className="rec-row">
@@ -137,11 +155,11 @@ export default function PhishingPage() {
       
       <div className="ph-container-2">
         <header className="ph-header-2">
-          <div className="ph-badge-2">PHISHING FORENSICS</div>
-          <h1 className="ph-title-2">Threat Intelligence Engine</h1>
+          <div className="ph-badge-2">AI-POWERED PHISHING ENGINE</div>
+          <h1 className="ph-title-2">ML-Based Threat Detection</h1>
           <p className="ph-desc-2">
-            Professional-grade analysis of suspicious domains and email headers.
-            Identify spoofing, malicious redirects, and behavioral threat patterns.
+            Our machine learning models analyze URLs and email headers to detect phishing attempts.
+            Real-time assessment of domain reputation, SSL certificates, geolocation, and heuristic scoring.
           </p>
         </header>
 

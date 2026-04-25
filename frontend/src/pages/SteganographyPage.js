@@ -111,12 +111,6 @@ const ResultPanel = ({ result, preview, onClear }) => {
 
         <div className="res-analysis-area">
           <div className="res-section-2">
-            <div className="section-label-2">LSB Bit Topology</div>
-            <LSBVisualizer isStego={result.isStego} />
-            <p className="section-desc">Identified bit-flip clusters in the least significant channel.</p>
-          </div>
-
-          <div className="res-section-2">
             <div className="section-label-2">Forensic Indicators</div>
             <div className="indicators-2">
               {result.metrics.map((m, i) => (
@@ -125,6 +119,30 @@ const ResultPanel = ({ result, preview, onClear }) => {
                   <span className={`status-${m.status}`}>{m.value}</span>
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div className="res-section-2">
+            <div className="section-label-2">Model Confidence & Verdict</div>
+            <div className="indicators-2">
+              <div className="ind-row-2">
+                <span>Verdict</span>
+                <span className={`status-${result.isStego ? 'danger' : 'safe'}`}>
+                  {result.isStego ? 'STEGO DETECTED' : 'CLEAN'}
+                </span>
+              </div>
+              <div className="ind-row-2">
+                <span>Confidence Level</span>
+                <span className={`status-${result.confidence > 85 ? 'danger' : 'safe'}`}>
+                  {result.confidence}%
+                </span>
+              </div>
+              <div className="ind-row-2">
+                <span>LSB Anomaly Score</span>
+                <span className={`status-${result.isStego ? 'danger' : 'safe'}`}>
+                  {result.lsbScore} / 100
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -148,12 +166,29 @@ const ResultPanel = ({ result, preview, onClear }) => {
 
 /* ── Main Page ───────────────────────────────── */
 export default function SteganographyPage() {
+  const [activeTab, setActiveTab] = useState('analyze');
+  
+  // Analyze State
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+
+  // Encode State
+  const [encodeFile, setEncodeFile] = useState(null);
+  const [encodePreview, setEncodePreview] = useState(null);
+  const [message, setMessage] = useState('');
+  const [encoding, setEncoding] = useState(false);
+  const [encodedImage, setEncodedImage] = useState(null);
+  const [encodedFilename, setEncodedFilename] = useState('');
+
+  // Decode State
+  const [decodeFile, setDecodeFile] = useState(null);
+  const [decodePreview, setDecodePreview] = useState(null);
+  const [decoding, setDecoding] = useState(false);
+  const [decodedMessage, setDecodedMessage] = useState('');
 
   const handleFile = (f) => {
     if (!f || !f.type.startsWith('image/')) return;
@@ -162,6 +197,24 @@ export default function SteganographyPage() {
     reader.onload = e => setPreview(e.target.result);
     reader.readAsDataURL(f);
     setResult(null);
+  };
+
+  const handleEncodeFile = (f) => {
+    if (!f || !f.type.startsWith('image/')) return;
+    setEncodeFile(f);
+    const reader = new FileReader();
+    reader.onload = e => setEncodePreview(e.target.result);
+    reader.readAsDataURL(f);
+    setEncodedImage(null);
+  };
+
+  const handleDecodeFile = (f) => {
+    if (!f || !f.type.startsWith('image/')) return;
+    setDecodeFile(f);
+    const reader = new FileReader();
+    reader.onload = e => setDecodePreview(e.target.result);
+    reader.readAsDataURL(f);
+    setDecodedMessage('');
   };
 
   const startScan = async () => {
@@ -189,94 +242,213 @@ export default function SteganographyPage() {
     }
   };
 
+  const runEncode = async () => {
+    if (!encodeFile || !message) return;
+    setEncoding(true);
+    setError(null);
+    try {
+      const data = await api.encodeImage(encodeFile, message);
+      setEncodedImage(data.image_base64);
+      setEncodedFilename(data.filename);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setEncoding(false);
+    }
+  };
+
+  const runDecode = async () => {
+    if (!decodeFile) return;
+    setDecoding(true);
+    setError(null);
+    try {
+      const data = await api.decodeImage(decodeFile);
+      setDecodedMessage(data.message || 'No hidden message found or corrupted data.');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDecoding(false);
+    }
+  };
+
   return (
     <div className="stego-page-2">
       <div className="stego-grid-2" />
       
       <div className="stego-container-2">
         <header className="stego-header-2">
-          <div className="stego-badge-2">IMAGE FORENSICS</div>
-          <h1 className="stego-title-2">Steganographic Analysis</h1>
+          <div className="stego-badge-2">AI-POWERED STEGO ENGINE</div>
+          <h1 className="stego-title-2">LSB & Entropy Detection</h1>
           <p className="stego-desc-2">
-            Detect hidden payloads within image data using advanced LSB analysis 
-            and statistical entropy mapping. Secure, local, and AI-enhanced.
+            Advanced steganography detection using statistical analysis. Detects hidden payloads via 
+            LSB anomaly scoring, chi-square testing, entropy mapping, and EXIF metadata analysis.
           </p>
+          
+          <div className="stego-tabs">
+            <button className={`stego-tab ${activeTab === 'analyze' ? 'active' : ''}`} onClick={() => setActiveTab('analyze')}>Analyze</button>
+            <button className={`stego-tab ${activeTab === 'encode' ? 'active' : ''}`} onClick={() => setActiveTab('encode')}>Encode (Hide)</button>
+            <button className={`stego-tab ${activeTab === 'decode' ? 'active' : ''}`} onClick={() => setActiveTab('decode')}>Decode (Reveal)</button>
+          </div>
         </header>
 
-        {result ? (
-          <ResultPanel result={result} preview={preview} onClear={() => { setFile(null); setPreview(null); setResult(null); }} />
-        ) : (
+        {error && <div className="stego-error-2" style={{marginBottom: '20px'}}>⚠ Failure: {error}</div>}
+
+        {activeTab === 'analyze' && (
+          result ? (
+            <ResultPanel result={result} preview={preview} onClear={() => { setFile(null); setPreview(null); setResult(null); }} />
+          ) : (
+            <div className="stego-analyzer-card glass">
+              <div className="stego-upload-area-2">
+                <div 
+                  className={`drop-zone-2 ${preview ? 'has-file' : ''}`}
+                  onClick={() => !preview && document.getElementById('stego-upload').click()}
+                >
+                  <input type="file" id="stego-upload" hidden accept="image/*" onChange={e => handleFile(e.target.files[0])} />
+                  {preview ? (
+                    <div className="preview-wrap-2">
+                      <img src={preview} alt="Analysis Target" />
+                      {scanning && <div className="scan-line-2" />}
+                      <div className="file-info-2">
+                        <span>{file?.name}</span>
+                        <button onClick={(e) => { e.stopPropagation(); setFile(null); setPreview(null); }}>✕</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="upload-prompt-2">
+                      <div className="icon-wrap-2"><IconImage /></div>
+                      <h3>Drag & Drop Image</h3>
+                      <p>Supported: PNG, JPEG, BMP, WebP</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="analysis-sidebar-2">
+                  <div className="sidebar-section">
+                    <div className="sidebar-label">ENGINE STATUS</div>
+                    <div className="status-indicator">
+                      <div className="status-dot" />
+                      <span>Neural Model v4.1 Active</span>
+                    </div>
+                  </div>
+                  <div className="sidebar-section">
+                    <div className="sidebar-label">DETECTION METHODS</div>
+                    <ul className="methods-list">
+                      <li><IconShield /> LSB Analysis</li>
+                      <li><IconAnalysis /> Chi-Square Test</li>
+                      <li><IconShield /> Entropy Mapping</li>
+                    </ul>
+                  </div>
+                  <div className="sidebar-actions">
+                    {scanning ? (
+                      <div className="progress-wrap-2">
+                        <div className="progress-bar-2">
+                          <div className="progress-fill-2" style={{ width: `${progress}%` }} />
+                        </div>
+                        <span>Analyzing Pixels... {progress}%</span>
+                      </div>
+                    ) : (
+                      <button className="btn-analyze-2" onClick={startScan} disabled={!file}>Run Forensic Analysis</button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        )}
+
+        {activeTab === 'encode' && (
           <div className="stego-analyzer-card glass">
             <div className="stego-upload-area-2">
               <div 
-                className={`drop-zone-2 ${preview ? 'has-file' : ''}`}
-                onClick={() => !preview && document.getElementById('stego-upload').click()}
+                className={`drop-zone-2 ${encodePreview ? 'has-file' : ''}`}
+                onClick={() => !encodePreview && document.getElementById('stego-encode-upload').click()}
               >
-                <input 
-                  type="file" 
-                  id="stego-upload" 
-                  hidden 
-                  accept="image/*" 
-                  onChange={e => handleFile(e.target.files[0])} 
-                />
-                
-                {preview ? (
+                <input type="file" id="stego-encode-upload" hidden accept="image/*" onChange={e => handleEncodeFile(e.target.files[0])} />
+                {encodePreview ? (
                   <div className="preview-wrap-2">
-                    <img src={preview} alt="Analysis Target" />
-                    {scanning && <div className="scan-line-2" />}
+                    <img src={encodePreview} alt="Encode Target" />
                     <div className="file-info-2">
-                      <span>{file?.name}</span>
-                      <button onClick={(e) => { e.stopPropagation(); setFile(null); setPreview(null); }}>✕</button>
+                      <span>{encodeFile?.name}</span>
+                      <button onClick={(e) => { e.stopPropagation(); setEncodeFile(null); setEncodePreview(null); setEncodedImage(null); }}>✕</button>
                     </div>
                   </div>
                 ) : (
                   <div className="upload-prompt-2">
                     <div className="icon-wrap-2"><IconImage /></div>
-                    <h3>Drag & Drop Image</h3>
-                    <p>Supported: PNG, JPEG, BMP, WebP</p>
+                    <h3>Upload Cover Image</h3>
+                    <p>PNG recommended for best results</p>
                   </div>
                 )}
               </div>
 
               <div className="analysis-sidebar-2">
                 <div className="sidebar-section">
-                  <div className="sidebar-label">ENGINE STATUS</div>
-                  <div className="status-indicator">
-                    <div className="status-dot" />
-                    <span>Neural Model v4.1 Active</span>
-                  </div>
+                  <div className="sidebar-label">SECRET MESSAGE</div>
+                  <textarea 
+                    className="stego-input-text" 
+                    placeholder="Enter the message to hide..." 
+                    value={message} 
+                    onChange={e => setMessage(e.target.value)}
+                    rows={4}
+                  />
                 </div>
-
-                <div className="sidebar-section">
-                  <div className="sidebar-label">DETECTION METHODS</div>
-                  <ul className="methods-list">
-                    <li><IconShield /> LSB Analysis</li>
-                    <li><IconAnalysis /> Chi-Square Test</li>
-                    <li><IconShield /> Entropy Mapping</li>
-                  </ul>
-                </div>
-
                 <div className="sidebar-actions">
-                  {scanning ? (
-                    <div className="progress-wrap-2">
-                      <div className="progress-bar-2">
-                        <div className="progress-fill-2" style={{ width: `${progress}%` }} />
-                      </div>
-                      <span>Analyzing Pixels... {progress}%</span>
-                    </div>
-                  ) : (
-                    <button 
-                      className="btn-analyze-2" 
-                      onClick={startScan} 
-                      disabled={!file}
-                    >
-                      Run Forensic Analysis
-                    </button>
+                  <button className="btn-analyze-2" onClick={runEncode} disabled={!encodeFile || !message || encoding}>
+                    {encoding ? 'Encoding...' : 'Hide Message'}
+                  </button>
+                  
+                  {encodedImage && (
+                    <a href={encodedImage} download={encodedFilename} className="btn-download-2" style={{marginTop: '10px', display: 'block', textAlign: 'center', textDecoration: 'none'}}>
+                      Download Encoded Image
+                    </a>
                   )}
                 </div>
               </div>
             </div>
-            {error && <div className="stego-error-2">⚠ Forensics Failure: {error}</div>}
+          </div>
+        )}
+
+        {activeTab === 'decode' && (
+          <div className="stego-analyzer-card glass">
+            <div className="stego-upload-area-2">
+              <div 
+                className={`drop-zone-2 ${decodePreview ? 'has-file' : ''}`}
+                onClick={() => !decodePreview && document.getElementById('stego-decode-upload').click()}
+              >
+                <input type="file" id="stego-decode-upload" hidden accept="image/*" onChange={e => handleDecodeFile(e.target.files[0])} />
+                {decodePreview ? (
+                  <div className="preview-wrap-2">
+                    <img src={decodePreview} alt="Decode Target" />
+                    <div className="file-info-2">
+                      <span>{decodeFile?.name}</span>
+                      <button onClick={(e) => { e.stopPropagation(); setDecodeFile(null); setDecodePreview(null); setDecodedMessage(''); }}>✕</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="upload-prompt-2">
+                    <div className="icon-wrap-2"><IconImage /></div>
+                    <h3>Upload Encoded Image</h3>
+                    <p>Select image to extract payload</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="analysis-sidebar-2">
+                <div className="sidebar-section">
+                  <div className="sidebar-label">DECODED PAYLOAD</div>
+                  {decodedMessage ? (
+                    <div className="decoded-msg-box">{decodedMessage}</div>
+                  ) : (
+                    <p style={{color: 'var(--text-secondary)', fontSize: '0.9rem'}}>No payload extracted yet.</p>
+                  )}
+                </div>
+                <div className="sidebar-actions">
+                  <button className="btn-analyze-2" onClick={runDecode} disabled={!decodeFile || decoding}>
+                    {decoding ? 'Decoding...' : 'Extract Message'}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

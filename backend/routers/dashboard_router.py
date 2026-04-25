@@ -145,20 +145,38 @@ async def stats_weekly(
     days   = []
     user_id = current_user.id if current_user else None
 
+    # Query once for the last 7 days and aggregate in Python to avoid
+    # database-specific DATE() casting issues across drivers/dialects.
+    week_start = today - timedelta(days=6)
+    result = await db.execute(
+        select(Scan).where(
+            Scan.user_id == user_id,
+            Scan.created_at >= datetime.combine(week_start, datetime.min.time()),
+        )
+    )
+    week_scans = result.scalars().all()
+
+    by_day = {}
+    for s in week_scans:
+        created = s.created_at
+        # Handle both timezone-aware and naive datetimes returned by DB drivers.
+        day_key = (created.date() if created else None)
+        if day_key is None:
+            continue
+        if day_key not in by_day:
+            by_day[day_key] = {"total": 0, "threats": 0}
+        by_day[day_key]["total"] += 1
+        if s.verdict != "SAFE":
+            by_day[day_key]["threats"] += 1
+
     for i in range(6, -1, -1):
         day_date = today - timedelta(days=i)
-        result   = await db.execute(
-            select(Scan).where(
-                Scan.user_id == user_id,
-                func.date(Scan.created_at) == day_date,
-            )
-        )
-        day_scans = result.scalars().all()
+        stats = by_day.get(day_date, {"total": 0, "threats": 0})
         days.append({
-            "date":    str(day_date),
-            "label":   DAYS[day_date.weekday()],
-            "total":   len(day_scans),
-            "threats": sum(1 for s in day_scans if s.verdict != "SAFE"),
+            "date": str(day_date),
+            "label": DAYS[day_date.weekday()],
+            "total": stats["total"],
+            "threats": stats["threats"],
         })
 
     return {"days": days}

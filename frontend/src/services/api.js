@@ -53,6 +53,19 @@ export const analyzeImage = (file) => {
   return post('/steganography/analyze', fd, true);
 };
 
+export const encodeImage = (file, message) => {
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('message', message);
+  return post('/steganography/encode', fd, true);
+};
+
+export const decodeImage = (file) => {
+  const fd = new FormData();
+  fd.append('file', file);
+  return post('/steganography/decode', fd, true);
+};
+
 /* ── Chatbot ──────────────────────────────── */
 export const askChatbot = (question) => post('/chatbot/ask', { question });
 

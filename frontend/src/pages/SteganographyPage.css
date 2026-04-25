@@ -354,3 +354,79 @@
   .entropy-wrap-2 { grid-template-columns: 1fr; }
   .stego-info-row-2 { grid-template-columns: 1fr; }
 }
+
+/* Tabs */
+.stego-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 30px;
+}
+
+.stego-tab {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-strong);
+  color: var(--text-secondary);
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.stego-tab.active {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+.stego-tab:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Encode/Decode Inputs */
+.stego-input-text {
+  width: 100%;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-strong);
+  color: var(--text-primary);
+  padding: 12px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: none;
+}
+
+.stego-input-text:focus {
+  border-color: var(--accent-primary);
+  outline: none;
+}
+
+.decoded-msg-box {
+  background: rgba(16, 185, 129, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  color: var(--text-primary);
+  padding: 16px;
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.btn-download-2 {
+  background: var(--bg-secondary);
+  border: 1px solid var(--accent-primary);
+  color: var(--accent-primary);
+  padding: 16px;
+  border-radius: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.btn-download-2:hover {
+  background: rgba(16, 185, 129, 0.1);
+}
+

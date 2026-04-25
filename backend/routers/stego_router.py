@@ -1,14 +1,15 @@
 import time, json, uuid
 from datetime import datetime
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+import base64
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from models import User, Scan
 from auth import get_current_user, get_optional_user
-from services.stego_service import analyze_image_file
+from services.stego_service import analyze_image_file, encode_text, decode_text
 
 from schemas import StegoScanResponse
 
@@ -85,3 +86,45 @@ async def get_heatmap(scan_id: str):
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="Heatmap not found for this scan")
     return FileResponse(path, media_type="image/png")
+
+
+@router.post("/encode")
+async def encode(
+    file: UploadFile = File(...),
+    message: str = Form(...),
+):
+    if file.content_type not in ALLOWED_TYPES:
+        raise HTTPException(status_code=415, detail=f"Unsupported file type: {file.content_type}")
+        
+    content = await file.read()
+    
+    try:
+        encoded_bytes = encode_text(content, message)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+        
+    b64_str = base64.b64encode(encoded_bytes).decode("utf-8")
+    
+    return {
+        "filename": f"encoded_{file.filename}",
+        "image_base64": f"data:image/png;base64,{b64_str}"
+    }
+
+
+@router.post("/decode")
+async def decode(
+    file: UploadFile = File(...),
+):
+    if file.content_type not in ALLOWED_TYPES:
+        raise HTTPException(status_code=415, detail=f"Unsupported file type: {file.content_type}")
+        
+    content = await file.read()
+    
+    try:
+        message = decode_text(content)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+        
+    return {
+        "message": message
+    }

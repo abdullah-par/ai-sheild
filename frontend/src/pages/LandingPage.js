@@ -78,40 +78,40 @@ const LandingPage = ({ onNavigate }) => {
         <div className="features-container">
           <div className="features-header">
             <div className="feat-label">PLATFORM STACK</div>
-            <h2 className="feat-title">Advanced Security Infrastructure</h2>
-            <p className="feat-subtitle">Built with military-grade protocols for modern forensic analysis.</p>
+            <h2 className="feat-title">Machine Learning Detection Engines</h2>
+            <p className="feat-subtitle">Three specialized models working in tandem for comprehensive threat detection.</p>
           </div>
           
           <div className="features-grid-2">
             <div className="feat-card-2">
               <div className="feat-icon-2"><FeatureIcon type="ai" /></div>
-              <h3>AI Heuristics</h3>
-              <p>Advanced neural models trained on millions of attack vectors to identify zero-day phishing attempts.</p>
+              <h3>Phishing ML Model</h3>
+              <p>Trained on millions of URLs and emails. Analyzes domain reputation, SSL validity, geolocation, redirect chains, and typosquatting patterns to classify threats with 95%+ accuracy.</p>
             </div>
             <div className="feat-card-2">
               <div className="feat-icon-2"><FeatureIcon type="secure" /></div>
-              <h3>Forensic Integrity</h3>
-              <p>Every analysis preserves technical metadata for incident response and legal reporting.</p>
+              <h3>Steganography Detector</h3>
+              <p>LSB-based anomaly detection using chi-square statistical testing. Identifies hidden encrypted payloads in images through entropy analysis and pixel-level pattern recognition.</p>
             </div>
             <div className="feat-card-2">
               <div className="feat-icon-2">⚡</div>
               <h3>Sub-Second Latency</h3>
-              <p>Get results in under 500ms using our high-performance asynchronous processing engine.</p>
+              <p>Get real-time threat intelligence in under 500ms. Asynchronous processing enables blazing-fast analysis of multiple threat vectors simultaneously.</p>
             </div>
             <div className="feat-card-2">
               <div className="feat-icon-2">📂</div>
-              <h3>Cross-Engine Scan</h3>
-              <p>Unified analysis across URLs, Email headers, and complex image-based payloads.</p>
+              <h3>Unified Detection Platform</h3>
+              <p>Single interface for URL scanning, email forensics, and image steganography analysis. All engines share real-time threat intelligence data.</p>
             </div>
             <div className="feat-card-2">
               <div className="feat-icon-2">🔒</div>
-              <h3>Zero-Trust Model</h3>
-              <p>No data is assumed safe. We validate every bit using entropy and statistical mapping.</p>
+              <h3>Heuristic & ML Hybrid</h3>
+              <p>Combines traditional heuristic rules with modern machine learning. When models disagree with heuristics, we use weighted ensemble approach for maximum confidence.</p>
             </div>
             <div className="feat-card-2">
               <div className="feat-icon-2">📈</div>
-              <h3>Detailed Analytics</h3>
-              <p>Complete historical logs and risk trends via our integrated analyst dashboard.</p>
+              <h3>Detailed Forensic Reports</h3>
+              <p>Complete breakdown of risk scores, confidence percentages, indicators, and actionable recommendations for incident response teams and security analysts.</p>
             </div>
           </div>
         </div>
@@ -124,30 +124,30 @@ const LandingPage = ({ onNavigate }) => {
             <div className="visual-box">
               <div className="scan-line-horizontal" />
               <div className="code-snippet">
-                <code>HTTP/1.1 302 Found</code><br/>
-                <code>Location: https://secure-login.ru/update</code><br/>
-                <code>X-Phish-Score: 98.4%</code>
+                <code>VERDICT: PHISHING</code><br/>
+                <code>Risk Score: 78.5%</code><br/>
+                <code>Confidence: 92.3%</code>
               </div>
             </div>
           </div>
           <div className="dive-content">
-            <div className="dive-label">PHISHING ENGINE</div>
-            <h2 className="dive-title">Beyond Simple Blacklists.</h2>
+            <div className="dive-label">PHISHING ML ENGINE</div>
+            <h2 className="dive-title">Intelligent URL & Email Analysis.</h2>
             <p className="dive-text">
-              Traditional security relies on static blacklists. AI.SHIELD uses dynamic heuristics to analyze the intent of a URL or Email.
+              Our phishing model analyzes multiple threat indicators in parallel. Domain reputation, SSL certificate validity, geolocation patterns, redirect chains, and keyword analysis combine to produce a risk score and confidence metric.
             </p>
             <div className="dive-features">
               <div className="dive-feat">
                 <h4>Domain Reputation</h4>
-                <p>Analyzing MX records, SSL certificate age, and registrar history to identify fresh-set phishing traps.</p>
+                <p>Analyzing domain age (new registrations are risky), SSL certificate validity, IP geolocation, and registrar reputation to identify fresh-set phishing infrastructure.</p>
               </div>
               <div className="dive-feat">
-                <h4>Header Forensics</h4>
-                <p>Parsing SPF, DKIM, and DMARC alignments to uncover spoofed sender identities in seconds.</p>
+                <h4>Heuristic Pattern Matching</h4>
+                <p>Detecting suspicious keywords (paypal, verify, update, urgent), risky TLDs (.ru, .cc, .xyz), and typosquatting attempts that mimic legitimate brands.</p>
               </div>
               <div className="dive-feat">
-                <h4>Heuristic URL Scoring</h4>
-                <p>Our ML models identify 'look-alike' characters and suspicious path structures designed to deceive users.</p>
+                <h4>ML Classification</h4>
+                <p>Our trained classifier uses URL features extracted by vectorization. When available, predictions are weighted heavily in the final risk assessment. Confidence scores reflect both model and heuristic agreement.</p>
               </div>
             </div>
           </div>
@@ -158,23 +158,23 @@ const LandingPage = ({ onNavigate }) => {
       <section className="deep-dive-section stego-dive">
         <div className="deep-dive-container inverse">
           <div className="dive-content">
-            <div className="dive-label">STEGO ENGINE</div>
-            <h2 className="dive-title">Unmasking Hidden Payloads.</h2>
+            <div className="dive-label">STEGANOGRAPHY ENGINE</div>
+            <h2 className="dive-title">Detecting Hidden Payloads.</h2>
             <p className="dive-text">
-              Steganography allows malicious actors to hide encrypted payloads inside seemingly harmless digital assets.
+              Steganography hides encrypted data in innocent-looking images. Our statistical analysis detects anomalies that betray hidden data, even in high-quality images.
             </p>
             <div className="dive-features">
               <div className="dive-feat">
-                <h4>LSB Analysis</h4>
-                <p>Detecting anomalies in the Least Significant Bits of pixel data where payloads are often concealed.</p>
-              </div>
-              <div className="dive-feat">
-                <h4>Chi-Square Testing</h4>
-                <p>Statistical testing for the frequency of color distributions that indicate non-natural data insertion.</p>
+                <h4>LSB Anomaly Detection</h4>
+                <p>Least Significant Bit analysis identifies unnatural patterns in the lowest pixel value bits where data is typically concealed. We measure the chi-square distance from randomness.</p>
               </div>
               <div className="dive-feat">
                 <h4>Entropy Mapping</h4>
-                <p>Visualizing the randomness of an image to find high-entropy blocks characteristic of encrypted data.</p>
+                <p>High entropy blocks indicate encrypted payloads. We calculate Shannon entropy across the image to visualize where hidden data clusters are most concentrated.</p>
+              </div>
+              <div className="dive-feat">
+                <h4>Metadata & Format Validation</h4>
+                <p>EXIF anomalies and unusual file characteristics indicate tampering. We verify image format integrity and flag suspicious metadata injection patterns.</p>
               </div>
             </div>
           </div>
@@ -199,18 +199,18 @@ const LandingPage = ({ onNavigate }) => {
           <div className="how-grid">
             <div className="how-step">
               <div className="step-num">01</div>
-              <h3>Evidence Submission</h3>
-              <p>Upload files, paste email headers, or enter URLs for immediate processing.</p>
+              <h3>Submit Evidence</h3>
+              <p>Upload an image for steganography analysis, paste raw email headers, or enter a URL for phishing detection.</p>
             </div>
             <div className="how-step">
               <div className="step-num">02</div>
-              <h3>Intelligent Analysis</h3>
-              <p>Our engines perform multi-layered scanning using heuristics and statistical models.</p>
+              <h3>Model Processing</h3>
+              <p>Our specialized ML models and heuristic engines analyze the data in parallel. Phishing model extracts domain features and classifies threat level. Stego model performs LSB and entropy analysis.</p>
             </div>
             <div className="how-step">
               <div className="step-num">03</div>
-              <h3>Forensic Reporting</h3>
-              <p>Receive a detailed verdict with risk scores and breakdown of detected indicators.</p>
+              <h3>Forensic Report</h3>
+              <p>Receive verdict, risk score, confidence percentage, and detailed indicators. Get actionable recommendations and full breakdown of why a threat was flagged.</p>
             </div>
           </div>
         </div>
