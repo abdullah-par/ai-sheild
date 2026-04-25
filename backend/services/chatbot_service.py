@@ -3,12 +3,26 @@ import logging
 from typing import Optional
 from dotenv import load_dotenv
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
+load_dotenv()
+
 try:
     from langchain_groq import ChatGroq
     from langchain_huggingface import HuggingFaceEmbeddings
-    from langchain.prompts import PromptTemplate
-    from langchain.chains import RetrievalQA
     from langchain_community.vectorstores import FAISS
+
+    # LangChain import paths differ across versions; support both layouts.
+    try:
+        from langchain.prompts import PromptTemplate
+    except Exception:
+        from langchain_core.prompts import PromptTemplate
+
+    try:
+        from langchain.chains import RetrievalQA
+    except Exception:
+        from langchain_classic.chains import RetrievalQA
+
     LANGCHAIN_IMPORT_ERROR = None
 except Exception as import_error:
     ChatGroq = None
@@ -18,12 +32,9 @@ except Exception as import_error:
     FAISS = None
     LANGCHAIN_IMPORT_ERROR = str(import_error)
 
-load_dotenv()
-
 logger = logging.getLogger(__name__)
 
 # ── Paths ────────────────────────────────────────
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 FAISS_INDEX_PATH = os.path.join(DATA_DIR, "faiss_index")
 CSV_DATA_PATH = os.path.join(DATA_DIR, "codejay_chatbot_full_dataset.csv")
@@ -31,6 +42,39 @@ CSV_DATA_PATH = os.path.join(DATA_DIR, "codejay_chatbot_full_dataset.csv")
 # ── Global Instances ────────────────────────────
 _qa_chain = None
 _embedder = None
+
+
+def _fallback_answer(question: str) -> str:
+    q = (question or "").lower()
+
+    if "phishing" in q and ("scan" in q or "url" in q):
+        return (
+            "To scan a phishing URL: go to the Phishing page, choose URL Scanner, paste the URL, and click Analyze. "
+            "You will get a verdict (SAFE/PHISHING/SUSPICIOUS), risk score, confidence, and security recommendations."
+        )
+
+    if "steg" in q or "hidden" in q or "lsb" in q or "image" in q:
+        return (
+            "The steganography detector analyzes uploaded images using LSB anomaly checks, chi-square style statistical analysis, "
+            "entropy signals, and metadata anomalies. It returns verdict, confidence, anomaly score, and payload estimate."
+        )
+
+    if "dashboard" in q or "stats" in q or "history" in q:
+        return (
+            "The dashboard shows total scans, threats found, clean scans, average risk score, weekly trend, and scan history. "
+            "Data is fetched from /api/v1/stats/summary, /api/v1/stats/weekly, and /api/v1/scans."
+        )
+
+    if "what can" in q or "ai-shield" in q or "platform" in q:
+        return (
+            "AI-SHIELD provides phishing URL/email analysis, image steganography detection, a scan history dashboard, and an assistant chatbot. "
+            "It returns risk scores, confidence, forensic indicators, and recommendations for each scan."
+        )
+
+    return (
+        "I can help with phishing scans, email checks, steganography analysis, dashboard stats, and platform usage. "
+        "Try asking: 'How do I scan a phishing URL?'"
+    )
 
 def get_embedder():
     global _embedder
@@ -54,7 +98,11 @@ def get_qa_chain():
         logger.error(f"Chatbot dependencies are unavailable: {LANGCHAIN_IMPORT_ERROR}")
         return None
 
-    groq_api_key = os.getenv("groq_api_key")
+    groq_api_key = (
+        os.getenv("GROQ_API_KEY")
+        or os.getenv("groq_api_key")
+        or os.getenv("GROQ_APIKEY")
+    )
     if not groq_api_key:
         logger.warning("GROQ_API_KEY not found in environment. Chatbot will not be functional.")
         return None
@@ -102,11 +150,14 @@ def get_qa_chain():
 def ask_chatbot(question: str) -> str:
     chain = get_qa_chain()
     if not chain:
-        return "I'm sorry, my AI brain is currently disconnected (missing API key or model index). Please contact the administrator."
+        return _fallback_answer(question)
     
     try:
         response = chain.invoke({"query": question})
-        return response.get('result', "I don't know.")
+        answer = response.get('result', "").strip()
+        if not answer or answer.lower() in {"i don't know.", "i dont know.", "i don't know", "i dont know"}:
+            return _fallback_answer(question)
+        return answer
     except Exception as e:
         logger.error(f"Error during chatbot invocation: {e}")
-        return "I encountered an error while processing your request."
+        return _fallback_answer(question)

@@ -87,7 +87,6 @@
   .features-grid-2 { grid-template-columns: 1fr; }
 }
 
-/* ── HERO ─────────────────────── */
 .hero-2 {
   position: relative;
   min-height: 100vh;
@@ -95,61 +94,173 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  text-align: center;
-  padding: 0 24px;
+  padding: 120px 0;
 }
 
 .hero-grid {
   position: absolute;
   inset: 0;
-  background-image: linear-gradient(var(--border-strong) 1px, transparent 1px),
-                    linear-gradient(90deg, var(--border-strong) 1px, transparent 1px);
-  background-size: 80px 80px;
-  mask-image: radial-gradient(circle at 50% 50%, black, transparent 80%);
-  opacity: 0.2; /* Muted for matte finish */
+  background-image: linear-gradient(var(--accent-primary) 1px, transparent 1px),
+                    linear-gradient(90deg, var(--accent-primary) 1px, transparent 1px);
+  background-size: 50px 50px;
+  opacity: 0.15;
+  pointer-events: none;
+  animation: grid-scroll 20s linear infinite;
+}
+
+@keyframes grid-scroll {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(50px); }
+}
+
+
+.hero-glow {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, var(--accent-primary) 0%, transparent 60%);
+  opacity: 0.15;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  filter: blur(100px);
+  animation: pulse-glow 8s infinite alternate ease-in-out;
   pointer-events: none;
 }
 
-/* Removed Hero Glow for Matte Finish */
+@keyframes pulse-glow {
+  0% { transform: translate(-50%, -50%) scale(1); opacity: 0.1; }
+  100% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.2; }
+}
 
 .hero-container-2 {
   position: relative;
   z-index: 2;
-  max-width: 900px;
+  width: 100%;
+  max-width: 1200px;
+  padding: 0 40px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+
+.hero-content-left {
+  text-align: left;
 }
 
 .hero-title-2 {
-  font-size: clamp(56px, 10vw, 110px);
+  font-size: clamp(40px, 5vw, 64px);
   font-weight: 800;
-  line-height: 0.85;
-  letter-spacing: -5px;
+  line-height: 1.1;
+  letter-spacing: -2px;
   color: var(--text-primary);
   margin-bottom: 32px;
 }
 
-.hero-title-2 span {
+.hero-title-2 span.text-gradient {
   display: block;
-  color: var(--accent-primary);
+  background: linear-gradient(90deg, var(--text-primary), var(--accent-primary), var(--text-primary));
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shine 4s linear infinite;
+  padding-bottom: 0.1em; /* Prevent descender clipping */
+}
+
+@keyframes shine {
+  to {
+    background-position: 200% center;
+  }
 }
 
 .hero-subtitle-2 {
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1.6;
   color: var(--text-secondary);
   max-width: 600px;
-  margin: 0 auto 56px;
+  margin: 0 0 40px 0;
   font-weight: 500;
 }
 
 .hero-actions-2 {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 20px;
 }
 
 .hero-actions-2 .btn-primary {
   box-shadow: none; /* Removed for Matte finish */
+}
+
+/* ── HERO BENTO GRID ── */
+.hero-bento-right {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: auto auto;
+  gap: 20px;
+  height: auto;
+}
+
+.bento-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  transition: all 0.4s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.bento-card:hover {
+  border-color: var(--accent-primary);
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-float);
+}
+
+.bento-stat, .bento-latency {
+  align-items: center;
+  text-align: center;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), transparent);
+}
+
+.bento-val {
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.bento-lab {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.bento-feature svg, .bento-stego svg {
+  margin-bottom: 16px;
+}
+
+@media (max-width: 1000px) {
+  .hero-container-2 {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+  .hero-content-left {
+    text-align: center;
+  }
+  .hero-subtitle-2 {
+    margin: 0 auto 40px;
+  }
+  .hero-actions-2 {
+    justify-content: center;
+  }
 }
 
 /* ── DEEP DIVES ───────────────── */
@@ -205,6 +316,20 @@
   gap: 24px;
 }
 
+.dive-feat {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-strong);
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  transition: all 0.3s ease;
+}
+
+.dive-feat:hover {
+  border-color: var(--accent-primary);
+  box-shadow: var(--shadow-float);
+  transform: translateX(5px);
+}
+
 .dive-feat h4 {
   font-size: 16px;
   font-weight: 700;
@@ -216,6 +341,7 @@
   font-size: 14px;
   color: var(--text-secondary);
   line-height: 1.5;
+  margin: 0;
 }
 
 /* Visuals */
@@ -322,6 +448,17 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+  background: var(--bg-primary);
+  padding: 40px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  transition: all 0.3s ease;
+}
+
+.how-step:hover {
+  border-color: var(--accent-primary);
+  box-shadow: var(--shadow-float);
+  transform: translateY(-5px);
 }
 
 .step-num {

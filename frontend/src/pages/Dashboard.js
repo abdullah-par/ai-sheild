@@ -5,10 +5,19 @@ import { transformStats, transformWeekly, transformHistory } from '../services/t
 
 /* ── Mini Bar Chart ─────────────────────────── */
 const BarChart = ({ data }) => {
-  const max = Math.max(...data.map(d => d.value));
+  const safeData = data?.length ? data : [
+    { label: 'Mon', value: 0 },
+    { label: 'Tue', value: 0 },
+    { label: 'Wed', value: 0 },
+    { label: 'Thu', value: 0 },
+    { label: 'Fri', value: 0 },
+    { label: 'Sat', value: 0 },
+    { label: 'Sun', value: 0 },
+  ];
+  const max = Math.max(1, ...safeData.map(d => d.value));
   return (
     <div className="bar-chart">
-      {data.map((d, i) => (
+      {safeData.map((d, i) => (
         <div key={i} className="bar-col">
           <div className="bar-wrap">
             <div
@@ -31,6 +40,7 @@ const BarChart = ({ data }) => {
 /* ── Threat Donut ───────────────────────────── */
 const DonutChart = ({ segments }) => {
   const total = segments.reduce((s, seg) => s + seg.value, 0);
+  const safeTotal = total || 1;
   let cumulativePercent = 0;
   const r = 52;
   const cx = 70;
@@ -42,7 +52,7 @@ const DonutChart = ({ segments }) => {
       <svg width="140" height="140" viewBox="0 0 140 140">
         <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="14"/>
         {segments.map((seg, i) => {
-          const pct = seg.value / total;
+          const pct = seg.value / safeTotal;
           const dashArray = `${circumference * pct} ${circumference * (1 - pct)}`;
           const offset = circumference * (1 - cumulativePercent);
           cumulativePercent += pct;
@@ -96,6 +106,13 @@ const typeIcons = {
   Image: '🖼️',
 };
 
+const liveFeedMeta = {
+  Phishing:   { msg: 'Phishing threat detected', color: 'var(--accent-danger)' },
+  Stego:      { msg: 'Steganography threat detected', color: 'var(--accent-secondary)' },
+  Safe:       { msg: 'Scan verified as safe', color: 'var(--accent-safe)' },
+  Suspicious: { msg: 'Suspicious activity flagged', color: 'var(--accent-warn)' },
+};
+
 /* ── Stat Card ──────────────────────────────── */
 const StatCard = ({ icon, label, value, change, changePos, color }) => (
   <div className="stat-card">
@@ -146,6 +163,16 @@ const Dashboard = ({ onNavigate }) => {
   const filtered = filter === 'all'
     ? history
     : history.filter(s => s.status.toLowerCase() === filter);
+
+  const liveFeed = history.slice(0, 5).map((scan) => {
+    const meta = liveFeedMeta[scan.status] || liveFeedMeta.Suspicious;
+    return {
+      msg: meta.msg,
+      target: scan.target,
+      time: scan.time,
+      color: meta.color,
+    };
+  });
 
   if (loading) return (
     <div className="dashboard">
@@ -229,22 +256,20 @@ const Dashboard = ({ onNavigate }) => {
               </div>
             </div>
             <div className="feed-items">
-              {[
-                { msg: 'Phishing URL blocked', target: 'free-gift-cards.xyz', time: '2s', color: '#ef4444' },
-                { msg: 'Stego detected', target: 'document_scan.png', time: '14s', color: '#8b5cf6' },
-                { msg: 'Clean URL verified', target: 'stripe.com', time: '31s', color: '#10b981' },
-                { msg: 'Email flagged', target: 'hr-update@companyy.com', time: '58s', color: '#f59e0b' },
-                { msg: 'Phishing URL blocked', target: 'security-alert.net', time: '1m', color: '#ef4444' },
-              ].map((f, i) => (
-                <div key={i} className="feed-item">
-                  <div className="feed-dot" style={{ background: f.color, boxShadow: `0 0 6px ${f.color}` }}/>
-                  <div className="feed-content">
-                    <span className="feed-msg">{f.msg}</span>
-                    <span className="feed-target">{f.target}</span>
+              {liveFeed.length ? (
+                liveFeed.map((f, i) => (
+                  <div key={i} className="feed-item">
+                    <div className="feed-dot" style={{ background: f.color, boxShadow: `0 0 6px ${f.color}` }} />
+                    <div className="feed-content">
+                      <span className="feed-msg">{f.msg}</span>
+                      <span className="feed-target">{f.target}</span>
+                    </div>
+                    <span className="feed-time">{f.time}</span>
                   </div>
-                  <span className="feed-time">{f.time} ago</span>
-                </div>
-              ))}
+                ))
+              ) : (
+                <div className="feed-empty">No scans yet. Run your first scan to populate the feed.</div>
+              )}
             </div>
           </div>
         </div>

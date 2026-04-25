@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from sqlalchemy import text
 
 from database import engine, Base
 from routers.auth_router      import router as auth_router
@@ -15,6 +16,14 @@ from routers.chatbot_router   import router as chatbot_router
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await conn.execute(text("""
+            IF COL_LENGTH('dbo.users', 'username') IS NULL
+                ALTER TABLE dbo.users ADD username NVARCHAR(100) NULL;
+        """))
+        await conn.execute(text("""
+            IF COL_LENGTH('dbo.users', 'avatar_key') IS NULL
+                ALTER TABLE dbo.users ADD avatar_key NVARCHAR(50) NULL;
+        """))
     yield
 
 

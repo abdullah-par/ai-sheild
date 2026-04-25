@@ -17,7 +17,12 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     if result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    user = User(email=body.email, hashed_password=hash_password(body.password))
+    user = User(
+        email=body.email,
+        username=body.username,
+        avatar_key=body.avatar_key,
+        hashed_password=hash_password(body.password),
+    )
     db.add(user)
     await db.commit()
     await db.refresh(user)

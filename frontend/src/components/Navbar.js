@@ -99,8 +99,14 @@ const Navbar = ({ currentPage, onNavigate, theme, toggleTheme }) => {
           {user ? (
             <div className="nav-user-profile">
               <div className="user-info" title={user.email}>
-                <div className="user-avatar">{user.email[0].toUpperCase()}</div>
-                <span className="user-email-preview">{user.email.split('@')[0]}</span>
+                <div className="user-avatar">
+                  {user.avatarDataUrl ? (
+                    <img src={user.avatarDataUrl} alt="User avatar" className="user-avatar-img" />
+                  ) : (
+                    (user.username || user.email)[0].toUpperCase()
+                  )}
+                </div>
+                <span className="user-email-preview">{user.username || user.email.split('@')[0]}</span>
               </div>
               <button className="btn-logout" onClick={() => { logout(); onNavigate('home'); }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -114,12 +120,6 @@ const Navbar = ({ currentPage, onNavigate, theme, toggleTheme }) => {
             </button>
           )}
 
-          <button className="btn-nav-launch" onClick={() => onNavigate('scan')}>
-            Launch Scanner
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 12h14M12 5l7 7-7 7"/>
-            </svg>
-          </button>
         </div>
 
         <button className={`hamburger ${menuOpen ? 'open' : ''}`} onClick={() => setMenuOpen(!menuOpen)}>

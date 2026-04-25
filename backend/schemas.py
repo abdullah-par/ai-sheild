@@ -6,7 +6,9 @@ from datetime import datetime
 # ── Auth ─────────────────────────────────────────
 class RegisterRequest(BaseModel):
     email: EmailStr
-    password: str = Field(..., min_length=8, max_length=100, description="Password must be at least 8 characters")
+    password: str = Field(..., min_length=6, max_length=100, description="Password must be at least 6 characters")
+    username: Optional[str] = Field(None, max_length=100)
+    avatar_key: Optional[str] = Field(None, max_length=50)
 
 class LoginRequest(BaseModel):
     email: EmailStr = Field(..., example="user@example.com")
@@ -19,6 +21,8 @@ class TokenResponse(BaseModel):
 class UserOut(BaseModel):
     id: int
     email: str
+    username: Optional[str] = None
+    avatar_key: Optional[str] = None
     is_active: bool
     created_at: datetime
 

@@ -2,6 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import './FloatingChatbot.css';
 import { askChatbot } from '../services/api';
 
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
+const HEALTH_URL = `${API_BASE.replace(/\/api\/v1\/?$/, '')}/health`;
+
 const quickPrompts = [
   'What can AI-SHIELD do?',
   'How do I scan a phishing URL?',
@@ -20,6 +23,7 @@ const FloatingChatbot = () => {
   const [messages, setMessages] = useState([greeting]);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState('');
+  const [serviceState, setServiceState] = useState('idle');
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -36,6 +40,43 @@ const FloatingChatbot = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    let mounted = true;
+    const checkHealth = async () => {
+      setServiceState('checking');
+      try {
+        const res = await fetch(HEALTH_URL);
+        if (!mounted) return;
+        setServiceState(res.ok ? 'online' : 'offline');
+      } catch {
+        if (!mounted) return;
+        setServiceState('offline');
+      }
+    };
+
+    checkHealth();
+    return () => {
+      mounted = false;
+    };
+  }, [isOpen]);
+
+  const normalizeAssistantResponse = (text, askedQuestion) => {
+    const raw = (text || '').trim();
+    if (!raw) {
+      return 'I do not have an answer for that right now.';
+    }
+
+    if (raw.toLowerCase().includes('ai brain is currently disconnected')) {
+      return `I could not access full retrieval context right now, but I can still help. Try asking a focused question like: "${askedQuestion}".`;
+    }
+
+    return raw;
+  };
 
   const submitQuestion = async (questionText) => {
     const trimmedQuestion = questionText.trim();
@@ -55,11 +96,12 @@ const FloatingChatbot = () => {
         {
           id: `assistant-${Date.now()}`,
           role: 'assistant',
-          text: data.response || 'I do not have an answer for that right now.',
+          text: normalizeAssistantResponse(data.response, 'How do I scan a phishing URL?'),
         },
       ]);
     } catch (requestError) {
       setError(requestError.message || 'Chatbot request failed.');
+      setServiceState('offline');
       setMessages((current) => [
         ...current,
         {
@@ -88,7 +130,10 @@ const FloatingChatbot = () => {
             <div>
               <div className="chatbot-kicker">AI ASSISTANT</div>
               <h2>Security Copilot</h2>
-              <p>Grounded answers from the backend LLM and project knowledge base.</p>
+              <p>Answers from AI-SHIELD backend knowledge plus built-in platform guidance.</p>
+              <div className={`chatbot-status ${serviceState}`}>
+                {serviceState === 'online' ? 'Backend online' : serviceState === 'offline' ? 'Backend unreachable' : serviceState === 'checking' ? 'Checking backend...' : 'Ready'}
+              </div>
             </div>
             <button type="button" className="chatbot-close" onClick={() => setIsOpen(false)} aria-label="Close chat">
               <span />
