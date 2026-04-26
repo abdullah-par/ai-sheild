@@ -44,12 +44,16 @@ def test_dashboard(token):
         return False
     print("[PASS] Stats Summary verified")
 
-    # 2. Scan History
-    history_res = requests.get(f"{BASE_URL}/scans", headers=headers)
-    if history_res.status_code != 200:
-        print(f"[FAIL] Scan History failed: {history_res.text}")
+    # 3. User Report
+    report_res = requests.get(f"{BASE_URL}/user/report", headers=headers)
+    if report_res.status_code != 200:
+        print(f"[FAIL] User Report failed: {report_res.text}")
         return False
-    print("[PASS] Scan History verified")
+    report_data = report_res.json()
+    if "user" not in report_data or "scans" not in report_data:
+        print(f"[FAIL] User Report missing required fields: {report_data}")
+        return False
+    print("[PASS] User Report verified")
     
     return True
 

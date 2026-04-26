@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
 
@@ -14,13 +15,16 @@ class User(Base):
     is_active     = Column(Boolean, default=True)
     created_at    = Column(DateTime(timezone=True), server_default=func.now())
 
+    # One-to-many relationship with Scan
+    scans = relationship("Scan", back_populates="user", cascade="all, delete-orphan")
+
 
 class Scan(Base):
     __tablename__ = "scans"
 
     id          = Column(Integer, primary_key=True, index=True)
     scan_id     = Column(String(20), unique=True, index=True)   # e.g. SC-00142
-    user_id     = Column(Integer, nullable=True)                 # nullable for anonymous
+    user_id     = Column(Integer, ForeignKey("users.id"), nullable=True)  # nullable for anonymous
     type        = Column(String(20), nullable=False)             # url | email | image
     target      = Column(String(512), nullable=False)            # URL / email address / filename
     verdict     = Column(String(30), nullable=False)             # SAFE | PHISHING | STEGO_DETECTED | SUSPICIOUS
@@ -29,3 +33,6 @@ class Scan(Base):
     scan_time_ms = Column(Integer, nullable=False)
     raw_result  = Column(Text, nullable=True)                    # JSON blob of full analysis
     created_at  = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Many-to-one relationship with User
+    user = relationship("User", back_populates="scans")

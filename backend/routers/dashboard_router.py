@@ -186,10 +186,11 @@ async def stats_weekly(
 @router.get("/scans/{scan_id}/report")
 async def export_report(
     scan_id: str,
-    format: str = Query("pdf", regex="^(pdf|csv|json)$"),
+    format: str = Query("json", regex="^json$"),
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
 ):
+    import json
     user_id = current_user.id if current_user else None
     result = await db.execute(
         select(Scan).where(Scan.scan_id == scan_id, Scan.user_id == user_id)
@@ -199,37 +200,104 @@ async def export_report(
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Scan not found")
 
-    # Placeholder for actual file generation logic
-    if format == "json":
-        from fastapi.responses import JSONResponse
-        return JSONResponse(content={
+    # Keep the parameter for backward compatibility with existing clients,
+    # but support JSON-only exports to avoid invalid file type downloads.
+    if format != "json":
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Only JSON export is supported")
+
+    from fastapi.responses import JSONResponse
+    return JSONResponse(content={
+        "scan_id": scan.scan_id,
+        "type": scan.type,
+        "target": scan.target,
+        "verdict": scan.verdict,
+        "risk_score": scan.risk_score,
+        "confidence": scan.confidence,
+        "scan_time_ms": scan.scan_time_ms,
+        "created_at": str(scan.created_at),
+        "raw_result": json.loads(scan.raw_result) if scan.raw_result else {}
+    })
+
+
+# ── User Report Generation ──────────────────────
+@router.get("/user/report")
+async def generate_user_report(
+    format: str = Query("json", regex="^json$"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),  # Requires authentication
+):
+    """Generate a comprehensive report for the authenticated user including all their scans."""
+    import json
+
+    # Get user info
+    user_info = {
+        "user_id": current_user.id,
+        "email": current_user.email,
+        "username": current_user.username,
+        "created_at": str(current_user.created_at),
+        "is_active": current_user.is_active,
+    }
+
+    # Get all user's scans
+    result = await db.execute(
+        select(Scan).where(Scan.user_id == current_user.id).order_by(Scan.created_at.desc())
+    )
+    scans = result.scalars().all()
+
+    # Calculate statistics
+    total_scans = len(scans)
+    threats_found = sum(1 for s in scans if s.verdict != "SAFE")
+    clean_scans = total_scans - threats_found
+    avg_risk_score = sum(s.risk_score for s in scans) / total_scans if total_scans else 0
+
+    # Breakdown by type and verdict
+    breakdown = {
+        "phishing_url": sum(1 for s in scans if s.type == "url" and s.verdict == "PHISHING"),
+        "phishing_email": sum(1 for s in scans if s.type == "email" and s.verdict == "PHISHING"),
+        "steganography": sum(1 for s in scans if s.verdict == "STEGO_DETECTED"),
+        "safe": clean_scans,
+        "suspicious": sum(1 for s in scans if s.verdict == "SUSPICIOUS"),
+    }
+
+    # Recent activity (last 30 days)
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    recent_scans = [s for s in scans if s.created_at >= thirty_days_ago]
+    recent_threats = sum(1 for s in recent_scans if s.verdict != "SAFE")
+
+    # Format scan details
+    scan_details = []
+    for scan in scans:
+        scan_details.append({
             "scan_id": scan.scan_id,
+            "type": scan.type,
+            "target": scan.target,
             "verdict": scan.verdict,
             "risk_score": scan.risk_score,
-            "raw_result": json.loads(scan.raw_result) if scan.raw_result else {}
+            "confidence": scan.confidence,
+            "scan_time_ms": scan.scan_time_ms,
+            "created_at": str(scan.created_at),
+            "raw_result": json.loads(scan.raw_result) if scan.raw_result else None,
         })
 
-    # For now, return a simple text file as a placeholder for PDF/CSV
-    from fastapi.responses import StreamingResponse
-    import io
-    
-    output = io.StringIO()
-    output.write(f"AI-SHIELD SECURITY REPORT\n")
-    output.write(f"==========================\n")
-    output.write(f"Scan ID: {scan.scan_id}\n")
-    output.write(f"Type: {scan.type}\n")
-    output.write(f"Target: {scan.target}\n")
-    output.write(f"Verdict: {scan.verdict}\n")
-    output.write(f"Risk Score: {scan.risk_score}%\n")
-    output.write(f"Confidence: {scan.confidence}%\n")
-    output.write(f"Timestamp: {scan.created_at}\n")
-    
-    output.seek(0)
-    filename = f"report_{scan.scan_id}.{format}"
-    media_type = "application/pdf" if format == "pdf" else "text/csv" if format == "csv" else "text/plain"
-    
-    return StreamingResponse(
-        io.BytesIO(output.getvalue().encode()),
-        media_type=media_type,
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
-    )
+    report_data = {
+        "generated_at": datetime.utcnow().isoformat(),
+        "user": user_info,
+        "summary": {
+            "total_scans": total_scans,
+            "threats_found": threats_found,
+            "clean_scans": clean_scans,
+            "average_risk_score": round(avg_risk_score, 2),
+            "breakdown": breakdown,
+        },
+        "recent_activity": {
+            "period_days": 30,
+            "scans_in_period": len(recent_scans),
+            "threats_in_period": recent_threats,
+        },
+        "scans": scan_details,
+    }
+
+    from fastapi.responses import JSONResponse
+    return JSONResponse(content=report_data)
+

@@ -31,7 +31,12 @@ const Navbar = ({ currentPage, onNavigate, theme, toggleTheme }) => {
     <nav className={`navbar ${scrolled ? 'scrolled' : ''}`}>
       <div className="navbar-inner">
         {/* Logo */}
-        <button className="nav-logo" onClick={() => onNavigate('home')}>
+        <button 
+          type="button" 
+          className="nav-logo" 
+          onClick={() => onNavigate('home')}
+          aria-label="Go to home page"
+        >
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
           </svg>
@@ -40,7 +45,12 @@ const Navbar = ({ currentPage, onNavigate, theme, toggleTheme }) => {
 
         {/* Nav Links */}
         <ul className={`nav-links ${menuOpen ? 'open' : ''}`}>
-          <li><button onClick={() => { onNavigate('home'); setMenuOpen(false); }} className={currentPage === 'home' ? 'active' : ''}>Home</button></li>
+          <li><button 
+            type="button"
+            onClick={() => { onNavigate('home'); setMenuOpen(false); }} 
+            className={currentPage === 'home' ? 'active' : ''}
+            aria-label="Go to home page"
+          >Home</button></li>
 
           <li className="nav-dropdown">
             <button className={`nav-dropdown-trigger ${(currentPage === 'phishing' || currentPage === 'steganography') ? 'active' : ''}`}>

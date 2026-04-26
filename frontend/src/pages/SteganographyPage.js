@@ -23,37 +23,121 @@ const IconAnalysis = () => (
 );
 
 /* ── Entropy Heatmap ──────────────────────────── */
-const EntropyMap = ({ active }) => {
+const EntropyMap = ({ active, imageSrc }) => {
   const canvasRef = useRef(null);
+
+  const clamp01 = (v) => Math.max(0, Math.min(1, v));
+
+  const colorForScore = (score) => {
+    const t = clamp01(score);
+    let r = 0;
+    let g = 0;
+    let b = 0;
+
+    if (t < 0.33) {
+      const p = t / 0.33;
+      r = Math.floor(5 + p * 8);
+      g = Math.floor(55 + p * 90);
+      b = Math.floor(140 + p * 20);
+    } else if (t < 0.66) {
+      const p = (t - 0.33) / 0.33;
+      r = Math.floor(13 + p * 180);
+      g = Math.floor(145 + p * 60);
+      b = Math.floor(160 - p * 130);
+    } else {
+      const p = (t - 0.66) / 0.34;
+      r = Math.floor(193 + p * 52);
+      g = Math.floor(205 - p * 140);
+      b = Math.floor(30 - p * 20);
+    }
+
+    return { r, g, b, a: 0.35 + t * 0.6 };
+  };
+
   useEffect(() => {
     if (!active || !canvasRef.current) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     const W = canvas.width, H = canvas.height;
-    const draw = () => {
-      ctx.fillStyle = '#020617';
-      ctx.fillRect(0, 0, W, H);
-      const cellW = 8, cellH = 8;
+
+    ctx.fillStyle = '#020617';
+    ctx.fillRect(0, 0, W, H);
+
+    if (!imageSrc) {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '12px monospace';
+      ctx.fillText('Heatmap unavailable: no image source', 12, 22);
+      return;
+    }
+
+    const img = new Image();
+    img.onload = () => {
+      const sourceCanvas = document.createElement('canvas');
+      const sourceCtx = sourceCanvas.getContext('2d');
+      sourceCanvas.width = img.naturalWidth || img.width;
+      sourceCanvas.height = img.naturalHeight || img.height;
+      sourceCtx.drawImage(img, 0, 0, sourceCanvas.width, sourceCanvas.height);
+
+      const { data, width, height } = sourceCtx.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
+      const cellW = 8;
+      const cellH = 8;
+      const bins = 16;
+
       for (let x = 0; x < W; x += cellW) {
         for (let y = 0; y < H; y += cellH) {
-          const base = (y / H) * 0.6 + (x / W) * 0.3;
-          const noise = Math.random() * 0.4;
-          let val = base + noise;
-          const cx = W * 0.6, cy = H * 0.35;
-          const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
-          if (dist < 60) val = Math.min(val + (1 - dist / 60) * 0.8, 1);
-          const r = Math.floor(val * 16);
-          const g = Math.floor(val * 185);
-          const b = Math.floor(val * 129);
-          ctx.fillStyle = `rgba(${r},${g},${b},${0.3 + val * 0.7})`;
+          const sx0 = Math.floor((x / W) * width);
+          const sx1 = Math.floor(((x + cellW) / W) * width);
+          const sy0 = Math.floor((y / H) * height);
+          const sy1 = Math.floor(((y + cellH) / H) * height);
+
+          let lsbOnes = 0;
+          let samples = 0;
+          const hist = new Array(bins).fill(0);
+
+          for (let sy = sy0; sy < Math.max(sy0 + 1, sy1); sy++) {
+            for (let sx = sx0; sx < Math.max(sx0 + 1, sx1); sx++) {
+              const idx = (sy * width + sx) * 4;
+              const r = data[idx];
+              const g = data[idx + 1];
+              const b = data[idx + 2];
+
+              lsbOnes += (r & 1) + (g & 1) + (b & 1);
+              samples += 3;
+
+              const lum = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+              const bin = Math.min(bins - 1, Math.floor((lum / 256) * bins));
+              hist[bin] += 1;
+            }
+          }
+
+          const lsbRatio = samples ? lsbOnes / samples : 0.5;
+          const lsbAnomaly = Math.min(1, Math.abs(lsbRatio - 0.5) * 2);
+
+          const pixelCount = hist.reduce((s, n) => s + n, 0) || 1;
+          let entropy = 0;
+          for (const h of hist) {
+            if (!h) continue;
+            const p = h / pixelCount;
+            entropy -= p * Math.log2(p);
+          }
+          const normalizedEntropy = Math.min(1, entropy / Math.log2(bins));
+
+          const score = clamp01(lsbAnomaly * 0.65 + normalizedEntropy * 0.35);
+          const c = colorForScore(score);
+          ctx.fillStyle = `rgba(${c.r},${c.g},${c.b},${c.a})`;
           ctx.fillRect(x, y, cellW - 1, cellH - 1);
         }
       }
     };
-    draw();
-    const interval = setInterval(draw, 1000);
-    return () => clearInterval(interval);
-  }, [active]);
+
+    img.onerror = () => {
+      ctx.fillStyle = '#ef4444';
+      ctx.font = '12px monospace';
+      ctx.fillText('Failed to render heatmap from image', 12, 22);
+    };
+
+    img.src = imageSrc;
+  }, [active, imageSrc]);
   return <canvas ref={canvasRef} width={400} height={200} className="entropy-canvas-2" />;
 };
 
@@ -151,7 +235,7 @@ const ResultPanel = ({ result, preview, onClear }) => {
       <div className="res-footer-2">
         <div className="section-label-2">Entropy Heatmap Visualization</div>
         <div className="entropy-wrap-2">
-          <EntropyMap active={showMap} />
+          <EntropyMap active={showMap} imageSrc={preview} />
           <div className="entropy-info-2">
             <p>{result.isStego 
               ? 'Critical entropy clusters detected. High probability of encrypted payload injection.' 
@@ -271,6 +355,35 @@ export default function SteganographyPage() {
     }
   };
 
+  const base64ToFile = (base64Data, filename) => {
+    try {
+      const arr = base64Data.split(',');
+      const mime = arr[0].match(/:(.*?);/)[1];
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      return new File([u8arr], filename, { type: mime });
+    } catch (e) {
+      console.error("Failed to convert base64 to File:", e);
+      return null;
+    }
+  };
+
+  const testInDecoder = () => {
+    if (!encodedImage) return;
+    const fileToDecode = base64ToFile(encodedImage, encodedFilename || 'encoded_image.png');
+    if (fileToDecode) {
+      setDecodeFile(fileToDecode);
+      setDecodePreview(encodedImage);
+      setDecodedMessage('');
+      setActiveTab('decode');
+    }
+  };
+
+
   return (
     <div className="stego-page-2">
       <div className="stego-grid-2" />
@@ -360,16 +473,16 @@ export default function SteganographyPage() {
           <div className="stego-analyzer-card glass">
             <div className="stego-upload-area-2">
               <div 
-                className={`drop-zone-2 ${encodePreview ? 'has-file' : ''}`}
-                onClick={() => !encodePreview && document.getElementById('stego-encode-upload').click()}
+                className={`drop-zone-2 ${(encodedImage || encodePreview) ? 'has-file' : ''}`}
+                onClick={() => !(encodedImage || encodePreview) && document.getElementById('stego-encode-upload').click()}
               >
                 <input type="file" id="stego-encode-upload" hidden accept="image/*" onChange={e => handleEncodeFile(e.target.files[0])} />
-                {encodePreview ? (
+                {(encodedImage || encodePreview) ? (
                   <div className="preview-wrap-2">
-                    <img src={encodePreview} alt="Encode Target" />
+                    <img src={encodedImage || encodePreview} alt="Encode Target" />
                     <div className="file-info-2">
-                      <span>{encodeFile?.name}</span>
-                      <button onClick={(e) => { e.stopPropagation(); setEncodeFile(null); setEncodePreview(null); setEncodedImage(null); }}>✕</button>
+                      <span>{encodedImage ? encodedFilename : encodeFile?.name}</span>
+                      <button onClick={(e) => { e.stopPropagation(); setEncodeFile(null); setEncodePreview(null); setEncodedImage(null); setMessage(''); }}>✕</button>
                     </div>
                   </div>
                 ) : (
@@ -382,25 +495,48 @@ export default function SteganographyPage() {
               </div>
 
               <div className="analysis-sidebar-2">
-                <div className="sidebar-section">
-                  <div className="sidebar-label">SECRET MESSAGE</div>
-                  <textarea 
-                    className="stego-input-text" 
-                    placeholder="Enter the message to hide..." 
-                    value={message} 
-                    onChange={e => setMessage(e.target.value)}
-                    rows={4}
-                  />
-                </div>
+                {encodedImage ? (
+                  <div className="sidebar-section">
+                    <div className="sidebar-label" style={{color: 'var(--accent-safe)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', marginBottom: '16px'}}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                      ENCODING SUCCESSFUL
+                    </div>
+                    <p style={{fontSize: '14px', color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: '24px'}}>
+                      Secret message has been securely embedded into the pixels using LSB encoding.
+                    </p>
+                    <button className="btn-analyze-2" onClick={testInDecoder} style={{background: 'rgba(16, 185, 129, 0.1)', color: 'var(--accent-primary)', border: '1px solid var(--accent-primary)', marginBottom: '12px'}}>
+                      Test in Decoder →
+                    </button>
+                  </div>
+                ) : (
+                  <div className="sidebar-section">
+                    <div className="sidebar-label">SECRET MESSAGE</div>
+                    <textarea 
+                      className="stego-input-text" 
+                      placeholder="Enter the message to hide..." 
+                      value={message} 
+                      onChange={e => setMessage(e.target.value)}
+                      rows={4}
+                    />
+                  </div>
+                )}
+
                 <div className="sidebar-actions">
-                  <button className="btn-analyze-2" onClick={runEncode} disabled={!encodeFile || !message || encoding}>
-                    {encoding ? 'Encoding...' : 'Hide Message'}
-                  </button>
-                  
-                  {encodedImage && (
-                    <a href={encodedImage} download={encodedFilename} className="btn-download-2" style={{marginTop: '10px', display: 'block', textAlign: 'center', textDecoration: 'none'}}>
+                  {!encodedImage ? (
+                    <button className="btn-analyze-2" onClick={runEncode} disabled={!encodeFile || !message || encoding}>
+                      {encoding ? 'Encoding...' : 'Hide Message'}
+                    </button>
+                  ) : (
+                    <a href={encodedImage} download={encodedFilename} className="btn-download-2" style={{display: 'block', textAlign: 'center', textDecoration: 'none'}}>
                       Download Encoded Image
                     </a>
+                  )}
+                  {encodedImage && (
+                    <button className="btn-dismiss-2" onClick={() => { setEncodeFile(null); setEncodePreview(null); setEncodedImage(null); setMessage(''); }} style={{marginTop: '12px', width: '100%', background: 'transparent', borderColor: 'var(--border-strong)'}}>
+                      Reset Form
+                    </button>
                   )}
                 </div>
               </div>
@@ -435,17 +571,34 @@ export default function SteganographyPage() {
 
               <div className="analysis-sidebar-2">
                 <div className="sidebar-section">
-                  <div className="sidebar-label">DECODED PAYLOAD</div>
                   {decodedMessage ? (
-                    <div className="decoded-msg-box">{decodedMessage}</div>
+                    <>
+                      <div className="sidebar-label" style={{color: 'var(--accent-safe)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', marginBottom: '16px'}}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        PAYLOAD EXTRACTED
+                      </div>
+                      <div className="decoded-msg-box" style={{marginBottom: '20px'}}>{decodedMessage}</div>
+                    </>
                   ) : (
-                    <p style={{color: 'var(--text-secondary)', fontSize: '0.9rem'}}>No payload extracted yet.</p>
+                    <>
+                      <div className="sidebar-label">DECODED PAYLOAD</div>
+                      <p style={{color: 'var(--text-secondary)', fontSize: '0.9rem'}}>No payload extracted yet.</p>
+                    </>
                   )}
                 </div>
+                
                 <div className="sidebar-actions">
-                  <button className="btn-analyze-2" onClick={runDecode} disabled={!decodeFile || decoding}>
-                    {decoding ? 'Decoding...' : 'Extract Message'}
-                  </button>
+                  {!decodedMessage ? (
+                    <button className="btn-analyze-2" onClick={runDecode} disabled={!decodeFile || decoding}>
+                      {decoding ? 'Decoding...' : 'Extract Message'}
+                    </button>
+                  ) : (
+                    <button className="btn-dismiss-2" onClick={() => { setDecodeFile(null); setDecodePreview(null); setDecodedMessage(''); }} style={{width: '100%', background: 'transparent', borderColor: 'var(--border-strong)'}}>
+                      Clear
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

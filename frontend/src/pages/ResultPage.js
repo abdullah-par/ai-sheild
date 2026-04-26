@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import './ResultPage.css';
+import { exportReport } from '../services/api';
 
 /* ── Simulated Analysis Data ────────────────── */
 const generateResult = (scanData) => {
@@ -79,6 +80,77 @@ const generateResult = (scanData) => {
   };
 };
 
+/* ── Generate Indicators from Real Data ─────── */
+const generateIndicatorsFromRealData = (scanData) => {
+  // Generate indicators based on real scan data
+  const isThreat = scanData.verdict !== 'SAFE';
+  
+  if (scanData.type === 'url') {
+    return [
+      { label: 'Risk Score', value: `${scanData.risk}/100`, status: scanData.risk >= 70 ? 'danger' : scanData.risk >= 40 ? 'warning' : 'safe' },
+      { label: 'Verdict', value: scanData.verdict, status: isThreat ? 'danger' : 'safe' },
+      { label: 'Confidence', value: `${scanData.confidence}%`, status: scanData.confidence >= 80 ? 'safe' : 'warning' },
+      { label: 'Scan Time', value: `${scanData.scanTime}ms`, status: 'safe' },
+      { label: 'Target URL', value: scanData.value, status: 'safe' },
+      { label: 'Scan Date', value: new Date(scanData.createdAt).toLocaleString(), status: 'safe' },
+    ];
+  } else if (scanData.type === 'email') {
+    return [
+      { label: 'Risk Score', value: `${scanData.risk}/100`, status: scanData.risk >= 70 ? 'danger' : scanData.risk >= 40 ? 'warning' : 'safe' },
+      { label: 'Verdict', value: scanData.verdict, status: isThreat ? 'danger' : 'safe' },
+      { label: 'Confidence', value: `${scanData.confidence}%`, status: scanData.confidence >= 80 ? 'safe' : 'warning' },
+      { label: 'Scan Time', value: `${scanData.scanTime}ms`, status: 'safe' },
+      { label: 'Email Analysis', value: 'Completed', status: 'safe' },
+      { label: 'Scan Date', value: new Date(scanData.createdAt).toLocaleString(), status: 'safe' },
+    ];
+  } else {
+    return [
+      { label: 'Risk Score', value: `${scanData.risk}/100`, status: scanData.risk >= 70 ? 'danger' : scanData.risk >= 40 ? 'warning' : 'safe' },
+      { label: 'Verdict', value: scanData.verdict, status: isThreat ? 'danger' : 'safe' },
+      { label: 'Confidence', value: `${scanData.confidence}%`, status: scanData.confidence >= 80 ? 'safe' : 'warning' },
+      { label: 'Scan Time', value: `${scanData.scanTime}ms`, status: 'safe' },
+      { label: 'Image Analysis', value: 'Completed', status: 'safe' },
+      { label: 'Scan Date', value: new Date(scanData.createdAt).toLocaleString(), status: 'safe' },
+    ];
+  }
+};
+
+const generateRecommendations = (verdict) => {
+  if (verdict === 'PHISHING') {
+    return [
+      'Do not click any links in this email',
+      'Do not provide any personal information',
+      'Report this email to your IT security team',
+      'Verify the sender through official channels',
+      'Enable two-factor authentication on your accounts',
+    ];
+  } else if (verdict === 'STEGO_DETECTED') {
+    return [
+      'Do not open or execute this file',
+      'Scan the file with updated antivirus software',
+      'Report suspicious files to security team',
+      'Avoid downloading files from untrusted sources',
+      'Keep your system and software updated',
+    ];
+  } else if (verdict === 'SUSPICIOUS') {
+    return [
+      'Exercise caution when interacting with this content',
+      'Verify the source through multiple channels',
+      'Do not share sensitive information',
+      'Report if you notice additional suspicious activity',
+      'Consider additional security measures',
+    ];
+  } else {
+    return [
+      'Content appears safe',
+      'Continue normal usage',
+      'Maintain good security practices',
+      'Regularly update your security software',
+      'Stay informed about current threats',
+    ];
+  }
+};
+
 /* ── Risk Gauge ─────────────────────────────── */
 const RiskGauge = ({ risk }) => {
   const [animated, setAnimated] = useState(0);
@@ -133,6 +205,7 @@ const ResultPage = ({ scanData, onNavigate }) => {
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState(null);
   const [progress, setProgress] = useState(0);
+  const [exporting, setExporting] = useState(false);
 
   const steps = [
     'Resolving target...',
@@ -143,22 +216,87 @@ const ResultPage = ({ scanData, onNavigate }) => {
   const [step, setStep] = useState(0);
 
   useEffect(() => {
-    let p = 0;
-    const interval = setInterval(() => {
-      p = Math.min(p + Math.random() * 12, 95);
-      setProgress(Math.floor(p));
-      setStep(Math.min(Math.floor(p / 25), 3));
-    }, 180);
-
-    setTimeout(() => {
-      clearInterval(interval);
+    // Check if we have real scan data (from history) or need to simulate
+    if (scanData.result && scanData.risk !== undefined) {
+      // Real scan data - show results immediately
       setProgress(100);
-      setResult(generateResult(scanData));
+      setResult({
+        risk: scanData.risk,
+        threatType: scanData.verdict,
+        confidence: scanData.confidence,
+        scanTime: scanData.scanTime,
+        indicators: generateIndicatorsFromRealData(scanData),
+        recommendations: generateRecommendations(scanData.verdict),
+      });
       setTimeout(() => setLoading(false), 400);
-    }, 2800);
+    } else {
+      // Simulated scan - show loading animation
+      let p = 0;
+      const interval = setInterval(() => {
+        p = Math.min(p + Math.random() * 12, 95);
+        setProgress(Math.floor(p));
+        setStep(Math.min(Math.floor(p / 25), 3));
+      }, 180);
 
-    return () => clearInterval(interval);
+      setTimeout(() => {
+        clearInterval(interval);
+        setProgress(100);
+        setResult(generateResult(scanData));
+        setTimeout(() => setLoading(false), 400);
+      }, 2800);
+
+      return () => clearInterval(interval);
+    }
   }, [scanData]);
+
+  const buildLocalReport = () => ({
+    exported_at: new Date().toISOString(),
+    source: scanData.result ? 'backend-scan-result' : 'frontend-simulated-result',
+    scan: {
+      scan_id: scanData.scanId || null,
+      type: scanData.type,
+      target: scanData.value || null,
+      verdict: result?.threatType || scanData.verdict || null,
+      risk_score: result?.risk ?? scanData.risk ?? null,
+      confidence: result?.confidence ?? scanData.confidence ?? null,
+      scan_time_s: result?.scanTime ?? scanData.scanTime ?? null,
+      created_at: scanData.createdAt || null,
+    },
+    indicators: result?.indicators || [],
+    recommendations: result?.recommendations || [],
+  });
+
+  const downloadJsonBlob = (payload, filename) => {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleJsonExport = async () => {
+    if (!result || exporting) return;
+    setExporting(true);
+    try {
+      if (scanData.scanId) {
+        const res = await exportReport(scanData.scanId, 'json');
+        if (!res.ok) throw new Error(`Export failed (${res.status})`);
+        const payload = await res.json();
+        downloadJsonBlob(payload, `report_${scanData.scanId}.json`);
+      } else {
+        const fallbackId = `local_${Date.now()}`;
+        downloadJsonBlob(buildLocalReport(), `report_${fallbackId}.json`);
+      }
+    } catch (e) {
+      alert(e.message || 'Failed to export report');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -271,15 +409,11 @@ const ResultPage = ({ scanData, onNavigate }) => {
 
         {/* Actions */}
         <div className="result-actions">
-          <button className="action-btn">
+          <button className="action-btn" onClick={handleJsonExport} disabled={exporting}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v9M4 8l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M2 14h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-            Download PDF Report
+            {exporting ? 'Exporting...' : 'Download JSON Report'}
           </button>
-          <button className="action-btn">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.5"/><path d="M5 8h6M8 5v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-            Export as JSON
-          </button>
-          <button className="action-btn">
+          <button className="action-btn" onClick={() => navigator.share?.({ title: 'AI Shield Scan Result', text: `Scan Result: ${result?.threatType || 'Analysis Complete'}`, url: window.location.href }) || alert('Sharing not supported on this browser')}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M14 10v2a2 2 0 01-2 2H4a2 2 0 01-2-2v-2M8 2v8M5 5l3-3 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             Share Result
           </button>

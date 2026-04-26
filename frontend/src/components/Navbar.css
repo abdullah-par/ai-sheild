@@ -37,8 +37,15 @@
   background: none;
   border: none;
   cursor: pointer;
-  padding: 0;
+  padding: 8px;
+  margin: -8px;
   color: var(--text-primary);
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.nav-logo:hover {
+  background: var(--bg-secondary);
 }
 
 .logo-text {

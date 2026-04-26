@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './Dashboard.css';
-import { getStats, getWeeklyStats, getScanHistory } from '../services/api';
+import { getStats, getWeeklyStats, getScanHistory, getScanDetail, generateUserReport } from '../services/api';
 import { transformStats, transformWeekly, transformHistory } from '../services/transformers';
+import { useAuth } from '../services/AuthContext';
 
 /* ── Mini Bar Chart ─────────────────────────── */
 const BarChart = ({ data }) => {
@@ -129,6 +130,7 @@ const StatCard = ({ icon, label, value, change, changePos, color }) => (
 
 /* ── Dashboard ───────────────────────────────── */
 const Dashboard = ({ onNavigate }) => {
+  const { user } = useAuth();
   const [filter, setFilter] = useState('all');
 
   // ── API Data State ───────────────────────────
@@ -138,6 +140,57 @@ const Dashboard = ({ onNavigate }) => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
+
+  const handleUserReport = async () => {
+    if (!user) {
+      alert('Please log in to generate a user report.');
+      onNavigate('auth');
+      return;
+    }
+    
+    try {
+      const reportData = await generateUserReport('json');
+
+      // Download the report
+      const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `user_report_${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      if (e.message.includes('Session expired')) {
+        // Token was cleared and user redirected, no need to show additional alert
+        return;
+      }
+      alert(e.message || 'Failed to generate user report');
+    }
+  };
+
+  const handleScanClick = async (scanId) => {
+    try {
+      const scanDetail = await getScanDetail(scanId);
+      onNavigate('result', { 
+        scanData: {
+          scanId: scanDetail.scan_id,
+          type: scanDetail.type,
+          value: scanDetail.target,
+          result: scanDetail.raw_result,
+          risk: scanDetail.risk_score,
+          verdict: scanDetail.verdict,
+          confidence: scanDetail.confidence,
+          scanTime: scanDetail.scan_time_ms,
+          createdAt: scanDetail.created_at
+        }
+      });
+    } catch (e) {
+      console.error('Error loading scan details:', e);
+      alert('Failed to load scan details');
+    }
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -207,13 +260,24 @@ const Dashboard = ({ onNavigate }) => {
             <div className="dash-breadcrumb">Dashboard</div>
             <h1 className="dash-title">Threat Intelligence <span className="gradient-text">Overview</span></h1>
           </div>
-          <button className="btn-primary" onClick={() => onNavigate('scan')}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <circle cx="7" cy="7" r="4.5" stroke="white" strokeWidth="1.5"/>
-              <path d="M12 12l-2.5-2.5" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-            New Scan
-          </button>
+          <div className="dash-actions">
+            {user && (
+              <button className="btn-secondary" onClick={handleUserReport}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M2 4h12M2 8h12M2 12h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  <path d="M10 14l2-2-2-2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Generate Report
+              </button>
+            )}
+            <button className="btn-primary" onClick={() => onNavigate('scan')}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <circle cx="7" cy="7" r="4.5" stroke="white" strokeWidth="1.5"/>
+                <path d="M12 12l-2.5-2.5" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+              New Scan
+            </button>
+          </div>
         </div>
 
         {/* Stats Row */}
@@ -303,7 +367,12 @@ const Dashboard = ({ onNavigate }) => {
             {filtered.map((scan, i) => {
               const st = statusColors[scan.status];
               return (
-                <div key={i} className="table-row">
+                <div 
+                  key={i} 
+                  className="table-row clickable-row" 
+                  onClick={() => handleScanClick(scan.id)}
+                  style={{ cursor: 'pointer' }}
+                >
                   <div className="td-id">{scan.id}</div>
                   <div className="td-type">
                     <span>{typeIcons[scan.type]}</span>

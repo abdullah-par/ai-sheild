@@ -57,6 +57,12 @@
   letter-spacing: -0.03em;
 }
 
+.dash-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
 /* Stats */
 .stats-row {
   display: grid;
@@ -439,6 +445,17 @@
   color: var(--text-primary);
   font-size: 13px;
   align-items: center;
+}
+
+.table-row.clickable-row {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.table-row.clickable-row:hover {
+  background: var(--bg-card-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .table-row:last-child {

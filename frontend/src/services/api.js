@@ -1,7 +1,14 @@
 const BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
+console.log('API BASE URL:', BASE);
 
 const handleResponse = async (res) => {
   if (!res.ok) {
+    if (res.status === 401) {
+      // Token expired or invalid - clear it and redirect to login
+      localStorage.removeItem('token');
+      window.location.href = '/auth';
+      throw new Error('Session expired. Please log in again.');
+    }
     const body = await res.json().catch(() => ({}));
     throw new Error(body.detail || body.message || `Request failed (${res.status})`);
   }
@@ -75,8 +82,13 @@ export const getScanHistory = (params = {}) => {
   return get(`/scans${qs ? `?${qs}` : ''}`);
 };
 
+export const getScanDetail = (scanId) => get(`/scans/${scanId}`);
+
 export const getStats      = () => get('/stats/summary');
 export const getWeeklyStats = () => get('/stats/weekly');
 
-export const exportReport = (scanId, format = 'pdf') =>
-  fetch(`${BASE}/scans/${scanId}/report?format=${format}`);
+export const exportReport = (scanId, format = 'json') =>
+  get(`/scans/${scanId}/report?format=${format}`);
+
+export const generateUserReport = (format = 'json') =>
+  get(`/user/report?format=${format}`);
