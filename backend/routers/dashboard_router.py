@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Optional
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, case
 
@@ -20,11 +20,14 @@ async def get_scans(
     type:    str = Query(None),
     verdict: str = Query(None),
     db:      AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_optional_user),
+    x_session_id: Optional[str] = Header(None),
 ):
     # If no user, show anonymous scans (where user_id is None)
     user_id = current_user.id if current_user else None
-    query = select(Scan).where(Scan.user_id == user_id)
+    if user_id:
+        query = select(Scan).where(Scan.user_id == user_id)
+    else:
+        query = select(Scan).where(Scan.user_id == None, Scan.session_id == x_session_id)
 
     if type:
         query = query.where(Scan.type == type)
@@ -64,12 +67,18 @@ async def get_scan(
     scan_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
+    x_session_id: Optional[str] = Header(None),
 ):
     import json
     user_id = current_user.id if current_user else None
-    result = await db.execute(
-        select(Scan).where(Scan.scan_id == scan_id, Scan.user_id == user_id)
-    )
+    if user_id:
+        result = await db.execute(
+            select(Scan).where(Scan.scan_id == scan_id, Scan.user_id == user_id)
+        )
+    else:
+        result = await db.execute(
+            select(Scan).where(Scan.scan_id == scan_id, Scan.user_id == None, Scan.session_id == x_session_id)
+        )
     scan = result.scalar_one_or_none()
     if not scan:
         from fastapi import HTTPException
@@ -87,12 +96,18 @@ async def delete_scan(
     scan_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
+    x_session_id: Optional[str] = Header(None),
 ):
     from fastapi import HTTPException
     user_id = current_user.id if current_user else None
-    result = await db.execute(
-        select(Scan).where(Scan.scan_id == scan_id, Scan.user_id == user_id)
-    )
+    if user_id:
+        result = await db.execute(
+            select(Scan).where(Scan.scan_id == scan_id, Scan.user_id == user_id)
+        )
+    else:
+        result = await db.execute(
+            select(Scan).where(Scan.scan_id == scan_id, Scan.user_id == None, Scan.session_id == x_session_id)
+        )
     scan = result.scalar_one_or_none()
     if not scan:
         raise HTTPException(status_code=404, detail="Scan not found")
@@ -105,11 +120,17 @@ async def delete_scan(
 async def stats_summary(
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
+    x_session_id: Optional[str] = Header(None),
 ):
     user_id = current_user.id if current_user else None
-    result = await db.execute(
-        select(Scan).where(Scan.user_id == user_id)
-    )
+    if user_id:
+        result = await db.execute(
+            select(Scan).where(Scan.user_id == user_id)
+        )
+    else:
+        result = await db.execute(
+            select(Scan).where(Scan.user_id == None, Scan.session_id == x_session_id)
+        )
     scans = result.scalars().all()
 
     total        = len(scans)
@@ -139,21 +160,29 @@ async def stats_summary(
 async def stats_weekly(
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
+    x_session_id: Optional[str] = Header(None),
 ):
     DAYS   = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     today  = datetime.utcnow().date()
     days   = []
     user_id = current_user.id if current_user else None
 
-    # Query once for the last 7 days and aggregate in Python to avoid
-    # database-specific DATE() casting issues across drivers/dialects.
     week_start = today - timedelta(days=6)
-    result = await db.execute(
-        select(Scan).where(
-            Scan.user_id == user_id,
-            Scan.created_at >= datetime.combine(week_start, datetime.min.time()),
+    if user_id:
+        result = await db.execute(
+            select(Scan).where(
+                Scan.user_id == user_id,
+                Scan.created_at >= datetime.combine(week_start, datetime.min.time()),
+            )
         )
-    )
+    else:
+        result = await db.execute(
+            select(Scan).where(
+                Scan.user_id == None,
+                Scan.session_id == x_session_id,
+                Scan.created_at >= datetime.combine(week_start, datetime.min.time()),
+            )
+        )
     week_scans = result.scalars().all()
 
     by_day = {}
@@ -189,12 +218,18 @@ async def export_report(
     format: str = Query("json", regex="^json$"),
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
+    x_session_id: Optional[str] = Header(None),
 ):
     import json
     user_id = current_user.id if current_user else None
-    result = await db.execute(
-        select(Scan).where(Scan.scan_id == scan_id, Scan.user_id == user_id)
-    )
+    if user_id:
+        result = await db.execute(
+            select(Scan).where(Scan.scan_id == scan_id, Scan.user_id == user_id)
+        )
+    else:
+        result = await db.execute(
+            select(Scan).where(Scan.scan_id == scan_id, Scan.user_id == None, Scan.session_id == x_session_id)
+        )
     scan = result.scalar_one_or_none()
     if not scan:
         from fastapi import HTTPException

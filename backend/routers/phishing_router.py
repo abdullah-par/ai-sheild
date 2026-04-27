@@ -1,7 +1,7 @@
 import time, re, json, uuid
 from datetime import datetime
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
@@ -19,7 +19,7 @@ def _next_scan_id(db_count: int) -> str:
 
 async def _save_scan(db: AsyncSession, user: Optional[User], scan_type: str,
                      target: str, verdict: str, risk: float,
-                     confidence: float, elapsed_ms: int, raw: dict) -> str:
+                     confidence: float, elapsed_ms: int, raw: dict, session_id: Optional[str] = None) -> str:
     # Simple sequential ID using timestamp to avoid extra DB query
     scan_id = f"SC-{uuid.uuid4().hex[:6].upper()}"
     scan = Scan(
@@ -32,6 +32,7 @@ async def _save_scan(db: AsyncSession, user: Optional[User], scan_type: str,
         confidence=confidence,
         scan_time_ms=elapsed_ms,
         raw_result=json.dumps(raw),
+        session_id=session_id if not user else None,
     )
     db.add(scan)
     await db.commit()
@@ -44,6 +45,7 @@ async def scan_url(
     body: URLScanRequest,
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
+    x_session_id: Optional[str] = Header(None),
 ):
     if not body.url.strip():
         raise HTTPException(status_code=422, detail="URL cannot be empty")
@@ -56,6 +58,7 @@ async def scan_url(
         db, current_user, "url", body.url,
         result["verdict"], result["risk_score"],
         result["confidence"], elapsed, result,
+        session_id=x_session_id,
     )
 
     return {
@@ -79,6 +82,7 @@ async def analyze_email(
     file: UploadFile = File(None),
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
+    x_session_id: Optional[str] = Header(None),
 ):
     if not raw_email and not file:
         raise HTTPException(status_code=422, detail="Provide raw_email text or upload a file")
@@ -99,6 +103,7 @@ async def analyze_email(
         db, current_user, "email", target,
         result["verdict"], result["risk_score"],
         result["confidence"], elapsed, result,
+        session_id=x_session_id,
     )
 
     return {
@@ -121,6 +126,7 @@ async def analyze_email_text_json(
     body: EmailScanRequest,
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
+    x_session_id: Optional[str] = Header(None),
 ):
     t0      = time.time()
     result  = analyze_email_text(body.raw_email)
@@ -131,6 +137,7 @@ async def analyze_email_text_json(
         db, current_user, "email", target,
         result["verdict"], result["risk_score"],
         result["confidence"], elapsed, result,
+        session_id=x_session_id,
     )
 
     return {

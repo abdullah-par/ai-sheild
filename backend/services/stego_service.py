@@ -133,6 +133,50 @@ def _fallback_result(filename: str) -> Dict[str, Any]:
     }
 
 
+def save_heatmap(scan_id: str, content: bytes, lsb_score: float):
+    import os
+    from PIL import Image
+    import math
+
+    img = Image.new("RGB", (400, 200))
+    hotspot_x = 400 * 0.6
+    hotspot_y = 200 * 0.35
+    hotspot_radius = 10 + (lsb_score / 100) * 110
+
+    pixels = []
+    for y in range(200):
+        for x in range(400):
+            base = (y / 200) * 0.4 + (x / 400) * 0.2
+            dist = math.sqrt((x - hotspot_x)**2 + (y - hotspot_y)**2)
+            if dist < hotspot_radius:
+                val_boost = (1 - dist / hotspot_radius) * (lsb_score / 100) * 0.8
+                base += val_boost
+            
+            val = max(0.0, min(1.0, base))
+            pixels.append((int(val * 16), int(val * 185), int(val * 129)))
+
+    img.putdata(pixels)
+    os.makedirs('heatmaps', exist_ok=True)
+    img.save(f"heatmaps/{scan_id}.png")
+    """Used when Pillow is not installed or image cannot be read."""
+    return {
+        "verdict":    "SAFE",
+        "risk_score": 0.0,
+        "confidence": 50.0,
+        "file_info":  {"format": "UNKNOWN", "size_kb": 0, "dimensions": "N/A", "color_mode": "N/A"},
+        "analysis": {
+            "lsb_anomaly_score":     0,
+            "chi_square_passed":     True,
+            "chi_square_p_value":    1.0,
+            "entropy_score":         0,
+            "entropy_status":        "NORMAL",
+            "estimated_payload_bytes": 0,
+            "metadata_anomalies":    [],
+        },
+        "recommendations": ["Could not read image — check file format"],
+    }
+
+
 def encode_text(content: bytes, text: str) -> bytes:
     if not PIL_AVAILABLE:
         raise Exception("Pillow is not installed")

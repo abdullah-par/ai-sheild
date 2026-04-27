@@ -26,6 +26,14 @@ const getHeaders = (isForm = false) => {
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
+  
+  let sessionId = sessionStorage.getItem('session_id');
+  if (!sessionId) {
+    sessionId = crypto.randomUUID();
+    sessionStorage.setItem('session_id', sessionId);
+  }
+  headers['X-Session-ID'] = sessionId;
+  
   return headers;
 };
 

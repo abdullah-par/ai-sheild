@@ -2,14 +2,14 @@ import time, json, uuid
 from datetime import datetime
 from typing import Optional
 import base64
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Header
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from models import User, Scan
 from auth import get_current_user, get_optional_user
-from services.stego_service import analyze_image_file, encode_text, decode_text
+from services.stego_service import analyze_image_file, encode_text, decode_text, save_heatmap
 
 from schemas import StegoScanResponse
 
@@ -19,7 +19,7 @@ ALLOWED_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/bmp", "image/gif
 MAX_SIZE_MB   = 10
 
 
-async def _save_scan(db, user, target, verdict, risk, confidence, elapsed, raw):
+async def _save_scan(db, user, target, verdict, risk, confidence, elapsed, raw, session_id=None):
     scan_id = f"SC-{uuid.uuid4().hex[:6].upper()}"
     scan = Scan(
         scan_id=scan_id,
@@ -31,6 +31,7 @@ async def _save_scan(db, user, target, verdict, risk, confidence, elapsed, raw):
         confidence=confidence,
         scan_time_ms=elapsed,
         raw_result=json.dumps(raw),
+        session_id=session_id if not user else None,
     )
     db.add(scan)
     await db.commit()
@@ -42,6 +43,7 @@ async def analyze(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
+    x_session_id: Optional[str] = Header(None),
 ):
     # Validate type
     if file.content_type not in ALLOWED_TYPES:
@@ -61,7 +63,10 @@ async def analyze(
         db, current_user, file.filename,
         result["verdict"], result["risk_score"],
         result["confidence"], elapsed, result,
+        session_id=x_session_id,
     )
+    
+    save_heatmap(scan_id, content, result["analysis"]["lsb_anomaly_score"])
 
     return {
         "scan_id":         scan_id,

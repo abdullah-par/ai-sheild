@@ -32,6 +32,7 @@ class Scan(Base):
     confidence  = Column(Float, nullable=False)
     scan_time_ms = Column(Integer, nullable=False)
     raw_result  = Column(Text, nullable=True)                    # JSON blob of full analysis
+    session_id  = Column(String(64), nullable=True)
     created_at  = Column(DateTime(timezone=True), server_default=func.now())
 
     # Many-to-one relationship with User
