@@ -140,6 +140,10 @@ const Dashboard = ({ onNavigate }) => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
+  
+  // ── Modal State ──────────────────────────────
+  const [activeModalScan, setActiveModalScan] = useState(null);
+  const [modalLoading, setModalLoading] = useState(false);
 
   const handleUserReport = async () => {
     if (!user) {
@@ -172,23 +176,26 @@ const Dashboard = ({ onNavigate }) => {
 
   const handleScanClick = async (scanId) => {
     try {
+      setModalLoading(true);
+      setActiveModalScan({ loading: true });
       const scanDetail = await getScanDetail(scanId);
-      onNavigate('result', { 
-        scanData: {
-          scanId: scanDetail.scan_id,
-          type: scanDetail.type,
-          value: scanDetail.target,
-          result: scanDetail.raw_result,
-          risk: scanDetail.risk_score,
-          verdict: scanDetail.verdict,
-          confidence: scanDetail.confidence,
-          scanTime: scanDetail.scan_time_ms,
-          createdAt: scanDetail.created_at
-        }
+      setActiveModalScan({
+        scanId: scanDetail.scan_id,
+        type: scanDetail.type,
+        value: scanDetail.target,
+        result: scanDetail.raw_result,
+        risk: scanDetail.risk_score,
+        verdict: scanDetail.verdict,
+        confidence: scanDetail.confidence,
+        scanTime: scanDetail.scan_time_ms,
+        createdAt: scanDetail.created_at
       });
     } catch (e) {
       console.error('Error loading scan details:', e);
       alert('Failed to load scan details');
+      setActiveModalScan(null);
+    } finally {
+      setModalLoading(false);
     }
   };
 
@@ -363,9 +370,10 @@ const Dashboard = ({ onNavigate }) => {
               <div>Risk</div>
               <div>Status</div>
               <div>Time</div>
+              <div>Action</div>
             </div>
             {filtered.map((scan, i) => {
-              const st = statusColors[scan.status];
+              const st = statusColors[scan.status] || { bg: 'rgba(148,163,184,0.1)', text: 'var(--text-primary)', dot: '#64748b' };
               return (
                 <div 
                   key={i} 
@@ -400,12 +408,145 @@ const Dashboard = ({ onNavigate }) => {
                     </span>
                   </div>
                   <div className="td-time">{scan.time}</div>
+                  <div>
+                    <button className="btn-view-action" onClick={(e) => {
+                      e.stopPropagation();
+                      handleScanClick(scan.id);
+                    }}>View</button>
+                  </div>
                 </div>
               );
             })}
           </div>
         </div>
       </div>
+
+      {/* Scan Detail Modal */}
+      {activeModalScan && (
+        <div className="modal-backdrop" onClick={() => !modalLoading && setActiveModalScan(null)}>
+          <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+            {modalLoading ? (
+              <div className="modal-loading-overlay">
+                <div className="modal-spinner" />
+                <div style={{ marginTop: '16px', color: 'var(--text-secondary)', fontSize: '13px' }}>Loading scan details...</div>
+              </div>
+            ) : (
+              <>
+                <div className="modal-header">
+                  <div className="modal-title-wrap">
+                    <span className="modal-subtitle">Scan ID: {activeModalScan.scanId}</span>
+                    <h2 className="modal-title">Scan Result <span className="gradient-text">Detail</span></h2>
+                  </div>
+                  <button className="modal-close-btn" onClick={() => setActiveModalScan(null)}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="modal-body">
+                  <div className="modal-grid">
+                    {/* Left Column: Summary */}
+                    <div className="modal-left">
+                      <div className="detail-card">
+                        <div className="detail-row">
+                          <span className="detail-label">Target</span>
+                          <span className="detail-value target-val" title={activeModalScan.value}>{activeModalScan.value}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="detail-label">Type</span>
+                          <span className="detail-value">{typeIcons[activeModalScan.type] || '🔍'} {activeModalScan.type}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="detail-label">Scan Time</span>
+                          <span className="detail-value">{activeModalScan.scanTime} ms</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="detail-label">Date</span>
+                          <span className="detail-value">{activeModalScan.createdAt ? new Date(activeModalScan.createdAt).toLocaleString() : 'N/A'}</span>
+                        </div>
+                      </div>
+
+                      <div className="detail-card verdict-card">
+                        <span className="detail-label">Verdict</span>
+                        <div className="modal-verdict" style={{
+                          background: (statusColors[activeModalScan.verdict] || statusColors['Suspicious'])?.bg || 'rgba(148, 163, 184, 0.1)',
+                          color: (statusColors[activeModalScan.verdict] || statusColors['Suspicious'])?.text || 'var(--text-primary)'
+                        }}>
+                          <div className="status-dot" style={{ background: (statusColors[activeModalScan.verdict] || statusColors['Suspicious'])?.dot || '#64748b' }} />
+                          {activeModalScan.verdict}
+                        </div>
+                        
+                        <span className="detail-label" style={{ marginTop: '16px' }}>Confidence</span>
+                        <div className="confidence-val">{activeModalScan.confidence}%</div>
+                      </div>
+                    </div>
+
+                    {/* Right Column: Risk & Results */}
+                    <div className="modal-right">
+                      <div className="detail-card risk-detail">
+                        <span className="detail-label">Risk Score</span>
+                        <div className="risk-score-wrap">
+                          <div className="risk-score-number" style={{
+                            color: activeModalScan.risk >= 70 ? 'var(--accent-danger)' : activeModalScan.risk >= 40 ? 'var(--accent-warn)' : 'var(--accent-safe)'
+                          }}>
+                            {activeModalScan.risk}
+                          </div>
+                          <div className="risk-score-bar-bg">
+                            <div className="risk-score-bar-fill" style={{
+                              width: `${activeModalScan.risk}%`,
+                              background: activeModalScan.risk >= 70 ? 'var(--accent-danger)' : activeModalScan.risk >= 40 ? 'var(--accent-warn)' : 'var(--accent-safe)'
+                            }} />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Raw Results Breakdown */}
+                      <div className="detail-card raw-results">
+                        <span className="detail-label">Analysis Breakdown</span>
+                        <div className="raw-results-content">
+                          {activeModalScan.result ? (
+                            typeof activeModalScan.result === 'object' ? (
+                              <pre className="json-display">
+                                {JSON.stringify(activeModalScan.result, null, 2)}
+                              </pre>
+                            ) : (
+                              <div className="text-result">{activeModalScan.result}</div>
+                            )
+                          ) : (
+                            <div className="text-result muted">No breakdown available.</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="modal-footer">
+                  <button className="btn-secondary" onClick={() => setActiveModalScan(null)}>Close</button>
+                  <button className="btn-primary" onClick={() => {
+                    const scanToNavigate = { ...activeModalScan };
+                    setActiveModalScan(null);
+                    onNavigate('result', { 
+                      scanData: {
+                        scanId: scanToNavigate.scanId,
+                        type: scanToNavigate.type,
+                        value: scanToNavigate.value,
+                        result: scanToNavigate.result,
+                        risk: scanToNavigate.risk,
+                        verdict: scanToNavigate.verdict,
+                        confidence: scanToNavigate.confidence,
+                        scanTime: scanToNavigate.scanTime,
+                        createdAt: scanToNavigate.createdAt
+                      } 
+                    });
+                  }}>View Full Report</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

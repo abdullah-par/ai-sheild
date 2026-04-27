@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 # ── Paths ────────────────────────────────────────
 DATA_DIR = os.path.join(BASE_DIR, "data")
 FAISS_INDEX_PATH = os.path.join(DATA_DIR, "faiss_index")
-CSV_DATA_PATH = os.path.join(DATA_DIR, "codejay_chatbot_full_dataset.csv")
+CSV_DATA_PATH = os.path.join(DATA_DIR, "datasets", "chatbot_full_dataset.csv")
 
 # ── Global Instances ────────────────────────────
 _qa_chain = None
