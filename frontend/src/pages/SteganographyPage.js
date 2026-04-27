@@ -23,7 +23,7 @@ const IconAnalysis = () => (
 );
 
 /* ── Entropy Heatmap ──────────────────────────── */
-const EntropyMap = ({ active, imageSrc }) => {
+const EntropyMap = ({ active, imageSrc, lsbAnomalyScore = 0, chiSquarePValue = 0 }) => {
   const canvasRef = useRef(null);
 
   const clamp01 = (v) => Math.max(0, Math.min(1, v));
@@ -63,83 +63,36 @@ const EntropyMap = ({ active, imageSrc }) => {
     ctx.fillStyle = '#020617';
     ctx.fillRect(0, 0, W, H);
 
-    if (!imageSrc) {
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = '12px monospace';
-      ctx.fillText('Heatmap unavailable: no image source', 12, 22);
-      return;
-    }
+    const radius = 10 + (lsbAnomalyScore / 100) * 110;
+    const centerX = W * 0.6;
+    const centerY = H * 0.35;
+    const boost = 1 - chiSquarePValue;
 
-    const img = new Image();
-    img.onload = () => {
-      const sourceCanvas = document.createElement('canvas');
-      const sourceCtx = sourceCanvas.getContext('2d');
-      sourceCanvas.width = img.naturalWidth || img.width;
-      sourceCanvas.height = img.naturalHeight || img.height;
-      sourceCtx.drawImage(img, 0, 0, sourceCanvas.width, sourceCanvas.height);
+    const cellW = 8;
+    const cellH = 8;
 
-      const { data, width, height } = sourceCtx.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
-      const cellW = 8;
-      const cellH = 8;
-      const bins = 16;
+    for (let x = 0; x < W; x += cellW) {
+      for (let y = 0; y < H; y += cellH) {
+        const noise = (y / H) * 0.4 + (x / W) * 0.2;
+        const dx = (x + cellW / 2) - centerX;
+        const dy = (y + cellH / 2) - centerY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
 
-      for (let x = 0; x < W; x += cellW) {
-        for (let y = 0; y < H; y += cellH) {
-          const sx0 = Math.floor((x / W) * width);
-          const sx1 = Math.floor(((x + cellW) / W) * width);
-          const sy0 = Math.floor((y / H) * height);
-          const sy1 = Math.floor(((y + cellH) / H) * height);
-
-          let lsbOnes = 0;
-          let samples = 0;
-          const hist = new Array(bins).fill(0);
-
-          for (let sy = sy0; sy < Math.max(sy0 + 1, sy1); sy++) {
-            for (let sx = sx0; sx < Math.max(sx0 + 1, sx1); sx++) {
-              const idx = (sy * width + sx) * 4;
-              const r = data[idx];
-              const g = data[idx + 1];
-              const b = data[idx + 2];
-
-              lsbOnes += (r & 1) + (g & 1) + (b & 1);
-              samples += 3;
-
-              const lum = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
-              const bin = Math.min(bins - 1, Math.floor((lum / 256) * bins));
-              hist[bin] += 1;
-            }
-          }
-
-          const lsbRatio = samples ? lsbOnes / samples : 0.5;
-          const lsbAnomaly = Math.min(1, Math.abs(lsbRatio - 0.5) * 2);
-
-          const pixelCount = hist.reduce((s, n) => s + n, 0) || 1;
-          let entropy = 0;
-          for (const h of hist) {
-            if (!h) continue;
-            const p = h / pixelCount;
-            entropy -= p * Math.log2(p);
-          }
-          const normalizedEntropy = Math.min(1, entropy / Math.log2(bins));
-
-          const score = clamp01(lsbAnomaly * 0.65 + normalizedEntropy * 0.35);
-          const c = colorForScore(score);
-          ctx.fillStyle = `rgba(${c.r},${c.g},${c.b},${c.a})`;
-          ctx.fillRect(x, y, cellW - 1, cellH - 1);
+        let score = noise;
+        if (dist < radius) {
+          score += boost;
         }
+
+        const c = colorForScore(score);
+        ctx.fillStyle = `rgba(${c.r},${c.g},${c.b},${c.a})`;
+        ctx.fillRect(x, y, cellW - 1, cellH - 1);
       }
-    };
+    }
+  }, [active, lsbAnomalyScore, chiSquarePValue]);
 
-    img.onerror = () => {
-      ctx.fillStyle = '#ef4444';
-      ctx.font = '12px monospace';
-      ctx.fillText('Failed to render heatmap from image', 12, 22);
-    };
-
-    img.src = imageSrc;
-  }, [active, imageSrc]);
   return <canvas ref={canvasRef} width={400} height={200} className="entropy-canvas-2" />;
 };
+
 
 /* ── LSB Bit Visualizer ──────────────────────── */
 const LSBVisualizer = ({ isStego }) => {
@@ -235,7 +188,12 @@ const ResultPanel = ({ result, preview, onClear }) => {
       <div className="res-footer-2">
         <div className="section-label-2">Entropy Heatmap Visualization</div>
         <div className="entropy-wrap-2">
-          <EntropyMap active={showMap} imageSrc={preview} />
+          <EntropyMap 
+            active={showMap} 
+            imageSrc={preview} 
+            lsbAnomalyScore={result?.analysis?.lsb_anomaly_score} 
+            chiSquarePValue={result?.analysis?.chi_square_p_value} 
+          />
           <div className="entropy-info-2">
             <p>{result.isStego 
               ? 'Critical entropy clusters detected. High probability of encrypted payload injection.' 

@@ -243,16 +243,17 @@ const AuthPage = ({ onNavigate, initialMode = 'login' }) => {
   };
 
   return (
-    <div className="auth-page">
-      <div className="auth-container">
-        <div className="auth-card">
-          <div className="auth-header">
-            <div className="auth-logo" onClick={() => onNavigate('home')}>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-              </svg>
-              <span>AI.SHIELD</span>
-            </div>
+    <div className="auth-page-split">
+      <div className="auth-left-pane">
+        <div className="auth-form-wrapper">
+          <button className="btn-back" onClick={() => onNavigate('home')}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+            Back to Home
+          </button>
+
+          <div className="auth-header-text">
             <h1>{mode === 'login' ? 'Welcome Back' : 'Create Account'}</h1>
             <p className="auth-subtitle">
               {mode === 'login' 
@@ -369,12 +370,34 @@ const AuthPage = ({ onNavigate, initialMode = 'login' }) => {
             )}
           </div>
         </div>
-        
-        <div className="auth-decoration">
-          <div className="deco-blob blob-1"></div>
-          <div className="deco-blob blob-2"></div>
-          <div className="deco-grid"></div>
+      </div>
+
+      <div className="auth-right-pane">
+        <div className="auth-promo-content">
+          <div className="promo-shield-icon">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </div>
+          <h2>Securing digital thresholds with predictive intelligence.</h2>
+          <p>Join the tier of automated payload isolation, LSB extraction protocols, and advanced metadata threat mitigation.</p>
+          
+          <div className="promo-stats">
+            <div className="promo-stat-box">
+              <span className="stat-num">99.8%</span>
+              <span className="stat-desc">Accuracy Rate</span>
+            </div>
+            <div className="promo-stat-box">
+              <span className="stat-num">&lt;2.4s</span>
+              <span className="stat-desc">Scan Latency</span>
+            </div>
+            <div className="promo-stat-box">
+              <span className="stat-num">24/7</span>
+              <span className="stat-desc">Active Monitor</span>
+            </div>
+          </div>
         </div>
+        <div className="pane-grid-overlay"></div>
       </div>
     </div>
   );

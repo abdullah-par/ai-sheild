@@ -3,7 +3,6 @@ import './index.css';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import LandingPage from './pages/LandingPage';
-import ScanPage from './pages/ScanPage';
 import ResultPage from './pages/ResultPage';
 import Dashboard from './pages/Dashboard';
 import PhishingPage from './pages/PhishingPage';
@@ -40,13 +39,6 @@ function AppContent() {
         return <LandingPage onNavigate={navigate} />;
       case 'auth':
         return <AuthPage onNavigate={navigate} initialMode={pageState.mode} />;
-      case 'scan':
-        return (
-          <ScanPage
-            initialType={pageState.scanType || 'url'}
-            onResult={(data) => navigate('result', { scanData: data })}
-          />
-        );
       case 'result':
         return (
           <ResultPage
@@ -70,15 +62,17 @@ function AppContent() {
 
   return (
     <div className={`app ${theme}`}>
-      <Navbar 
-        currentPage={currentPage} 
-        onNavigate={navigate} 
-        theme={theme} 
-        toggleTheme={toggleTheme} 
-      />
+      {currentPage !== 'auth' && (
+        <Navbar 
+          currentPage={currentPage} 
+          onNavigate={navigate} 
+          theme={theme} 
+          toggleTheme={toggleTheme} 
+        />
+      )}
       <main>{renderPage()}</main>
-      <Footer onNavigate={navigate} />
-      <FloatingChatbot />
+      {currentPage === 'home' && <Footer onNavigate={navigate} />}
+      {currentPage !== 'auth' && <FloatingChatbot />}
     </div>
   );
 }

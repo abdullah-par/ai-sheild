@@ -47,6 +47,7 @@ export const transformStegoScan = (d) => ({
   scanTime:    (d.scan_time_ms / 1000).toFixed(2),
   filename:    d.filename,
   heatmapUrl:  d.heatmap_url,
+  analysis:    d.analysis,
   metrics: [
     { label: 'LSB Anomaly Score',  value: `${d.analysis.lsb_anomaly_score.toFixed(1)} / 100`,  status: d.analysis.lsb_anomaly_score > 50 ? 'danger' : 'safe' },
     { label: 'Chi-Square Test',    value: d.analysis.chi_square_passed ? `Passed (p=${d.analysis.chi_square_p_value})` : `Failed (p=${d.analysis.chi_square_p_value})`, status: bool(d.analysis.chi_square_passed) },
