@@ -136,9 +136,14 @@ const ReportsPage = ({ onNavigate }) => {
               <h3>AI Assessment</h3>
               <div className="markdown-body">
                 {report.ai_raw_content.split('\n').map((line, index) => {
-                  if (line.startsWith('EXECUTIVE SUMMARY:') || line.startsWith('THREAT LANDSCAPE:') || line.startsWith('PATTERN RECOGNITION:') || line.startsWith('ACTIONABLE RECOMMENDATIONS:')) {
+                  if (line.startsWith('FORENSIC SUMMARY:') || 
+                      line.startsWith('EVIDENCE PRESERVATION & ARTIFACTS:') || 
+                      line.startsWith('TACTICS, TECHNIQUES, AND PROCEDURES') || 
+                      line.startsWith('CHAIN OF CUSTODY') || 
+                      line.startsWith('REMEDIATION & MITIGATION PROTOCOLS:')) {
                     return <h4 key={index} style={{ marginTop: '24px', color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '1px' }}>{line}</h4>;
                   }
+
                   if (line.match(/^\d+\./)) {
                     return <p key={index} style={{ paddingLeft: '20px', textIndent: '-20px' }}>{line}</p>;
                   }

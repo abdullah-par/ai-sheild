@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+from typing import Optional
 from datetime import datetime, timedelta
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,8 +24,8 @@ except ImportError:
 
 class AIReportService:
     @staticmethod
-    async def generate_report(time_range: str, db: AsyncSession) -> Report:
-        logger.info(f"🤖 Starting AI Report generation for range: {time_range}")
+    async def generate_report(time_range: str, db: AsyncSession, user_id: Optional[int] = None) -> Report:
+        logger.info(f"🤖 Starting AI Report generation for range: {time_range}, user_id: {user_id}")
         
         # 1. Calculate time bounds
         end_date = datetime.utcnow()
@@ -37,17 +38,34 @@ class AIReportService:
 
         # 2. Gather Data from Database
         total_scans_query = select(func.count(Scan.id)).where(Scan.created_at >= start_date)
+        if user_id:
+            total_scans_query = total_scans_query.where(Scan.user_id == user_id)
+        else:
+            # For anonymous reports, do not mix logged-in user data
+            total_scans_query = total_scans_query.where(Scan.user_id.is_(None))
+            
         total_scans_result = await db.execute(total_scans_query)
         total_scans = total_scans_result.scalar() or 0
 
         malicious_query = select(Scan).where(Scan.created_at >= start_date, Scan.verdict != "SAFE")
+        if user_id:
+            malicious_query = malicious_query.where(Scan.user_id == user_id)
+        else:
+            malicious_query = malicious_query.where(Scan.user_id.is_(None))
+            
         malicious_result = await db.execute(malicious_query)
         malicious_scans = malicious_result.scalars().all()
         malicious_count = len(malicious_scans)
 
         breakdown_query = select(Scan.type, func.count(Scan.id)).where(
             Scan.created_at >= start_date, Scan.verdict != "SAFE"
-        ).group_by(Scan.type)
+        )
+        if user_id:
+            breakdown_query = breakdown_query.where(Scan.user_id == user_id)
+        else:
+            breakdown_query = breakdown_query.where(Scan.user_id.is_(None))
+            
+        breakdown_query = breakdown_query.group_by(Scan.type)
         breakdown_result = await db.execute(breakdown_query)
         breakdown = breakdown_result.all()
         
@@ -58,6 +76,11 @@ class AIReportService:
             top_attack = breakdown_list[0][0]
 
         all_scans_query = select(Scan).where(Scan.created_at >= start_date)
+        if user_id:
+            all_scans_query = all_scans_query.where(Scan.user_id == user_id)
+        else:
+            all_scans_query = all_scans_query.where(Scan.user_id.is_(None))
+            
         all_scans_result = await db.execute(all_scans_query)
         all_scans = all_scans_result.scalars().all()
         
@@ -81,8 +104,8 @@ class AIReportService:
         }
 
         prompt = f"""
-        You are an expert Cybersecurity Analyst (CISM/CISSP certified). 
-        Analyze the following IDS (Intrusion Detection System) security data for the last {time_range}:
+        You are a Cyber Forensics Expert and Incident Responder. 
+        Analyze the following security telemetry data for the last {time_range}:
         
         DATA SUMMARY:
         - Total Network Flows Analyzed: {stats_summary['total_traffic']}
@@ -91,13 +114,15 @@ class AIReportService:
         - Primary Attack Vectors: {stats_summary['attack_types']}
         - Recent Malicious Targets: {stats_summary['sample_malicious_targets']}
 
-        Please provide a professional Security Analysis Report in plain text format. Do not use complex markdown formatting like excessive bolding or tables.
-        Include these sections:
-        1. EXECUTIVE SUMMARY: A high-level overview.
-        2. THREAT LANDSCAPE: Analysis of attack patterns.
-        3. PATTERN RECOGNITION: Campaign identification.
-        4. ACTIONABLE RECOMMENDATIONS: 3-5 specific steps.
-        Keep it professional and technical.
+        Please provide a highly technical, objective Cyber Forensics Report. Avoid conversational or overly descriptive language.
+        Format the output using clear forensic categories:
+        1. FORENSIC SUMMARY: High-level technical baseline.
+        2. EVIDENCE PRESERVATION & ARTIFACTS: Identified malicious targets and attack vectors.
+        3. TACTICS, TECHNIQUES, AND PROCEDURES (TTPs): Technical breakdown of the exploitation methods.
+        4. CHAIN OF CUSTODY & INCIDENT TIMELINE: Analysis of flow progression.
+        5. REMEDIATION & MITIGATION PROTOCOLS: Exact technical countermeasures (e.g., firewall rules, patch management).
+        
+        Use concise, evidence-based language (e.g., "IOCs identified", "TTP correlation"). Keep it in plain text format without excessive markdown.
         """
 
         ai_response = "AI Analysis unavailable (Missing API Key)."
@@ -116,6 +141,7 @@ class AIReportService:
 
         report = Report(
             title=f"Security Analysis Report ({time_range})",
+            user_id=user_id,
             time_range_start=start_date,
             time_range_end=end_date,
             total_flows=total_scans,
@@ -133,6 +159,7 @@ class AIReportService:
         logger.info(f"✅ AI Report generated and saved to DB: {report.id}")
         
         return report
+
 
     @staticmethod
     async def generate_pdf(report_id: int, db: AsyncSession) -> bytes:

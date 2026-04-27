@@ -9,7 +9,20 @@ from models import User, Scan
 from auth import get_current_user, get_optional_user
 from schemas import PaginatedScans, StatsSummary, WeeklyStats, ScanDetail
 
+from sqlalchemy import select, func, case, update
+
 router = APIRouter(prefix="/api/v1", tags=["dashboard"])
+
+async def link_guest_scans(user_id: int, session_id: Optional[str], db: AsyncSession):
+    if user_id and session_id:
+        stmt = (
+            update(Scan)
+            .where(Scan.user_id.is_(None), Scan.session_id == session_id)
+            .values(user_id=user_id)
+        )
+        await db.execute(stmt)
+        await db.commit()
+
 
 
 # ── Paginated Scan History ───────────────────────
@@ -20,14 +33,21 @@ async def get_scans(
     type:    str = Query(None),
     verdict: str = Query(None),
     db:      AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user),
     x_session_id: Optional[str] = Header(None),
 ):
     # If no user, show anonymous scans (where user_id is None)
     user_id = current_user.id if current_user else None
     if user_id:
+        if x_session_id:
+            await link_guest_scans(user_id, x_session_id, db)
         query = select(Scan).where(Scan.user_id == user_id)
+
     else:
-        query = select(Scan).where(Scan.user_id == None, Scan.session_id == x_session_id)
+        if x_session_id:
+            query = select(Scan).where(Scan.user_id.is_(None), Scan.session_id == x_session_id)
+        else:
+            query = select(Scan).where(Scan.user_id.is_(None))
 
     if type:
         query = query.where(Scan.type == type)
@@ -72,13 +92,21 @@ async def get_scan(
     import json
     user_id = current_user.id if current_user else None
     if user_id:
+        if x_session_id:
+            await link_guest_scans(user_id, x_session_id, db)
         result = await db.execute(
             select(Scan).where(Scan.scan_id == scan_id, Scan.user_id == user_id)
         )
     else:
-        result = await db.execute(
-            select(Scan).where(Scan.scan_id == scan_id, Scan.user_id == None, Scan.session_id == x_session_id)
-        )
+        if x_session_id:
+            result = await db.execute(
+                select(Scan).where(Scan.scan_id == scan_id, Scan.user_id.is_(None), Scan.session_id == x_session_id)
+            )
+        else:
+            result = await db.execute(
+                select(Scan).where(Scan.scan_id == scan_id, Scan.user_id.is_(None))
+            )
+
     scan = result.scalar_one_or_none()
     if not scan:
         from fastapi import HTTPException
@@ -101,13 +129,21 @@ async def delete_scan(
     from fastapi import HTTPException
     user_id = current_user.id if current_user else None
     if user_id:
+        if x_session_id:
+            await link_guest_scans(user_id, x_session_id, db)
         result = await db.execute(
             select(Scan).where(Scan.scan_id == scan_id, Scan.user_id == user_id)
         )
     else:
-        result = await db.execute(
-            select(Scan).where(Scan.scan_id == scan_id, Scan.user_id == None, Scan.session_id == x_session_id)
-        )
+        if x_session_id:
+            result = await db.execute(
+                select(Scan).where(Scan.scan_id == scan_id, Scan.user_id.is_(None), Scan.session_id == x_session_id)
+            )
+        else:
+            result = await db.execute(
+                select(Scan).where(Scan.scan_id == scan_id, Scan.user_id.is_(None))
+            )
+
     scan = result.scalar_one_or_none()
     if not scan:
         raise HTTPException(status_code=404, detail="Scan not found")
@@ -124,13 +160,21 @@ async def stats_summary(
 ):
     user_id = current_user.id if current_user else None
     if user_id:
+        if x_session_id:
+            await link_guest_scans(user_id, x_session_id, db)
         result = await db.execute(
             select(Scan).where(Scan.user_id == user_id)
         )
     else:
-        result = await db.execute(
-            select(Scan).where(Scan.user_id == None, Scan.session_id == x_session_id)
-        )
+        if x_session_id:
+            result = await db.execute(
+                select(Scan).where(Scan.user_id.is_(None), Scan.session_id == x_session_id)
+            )
+        else:
+            result = await db.execute(
+                select(Scan).where(Scan.user_id.is_(None))
+            )
+
     scans = result.scalars().all()
 
     total        = len(scans)
@@ -169,6 +213,8 @@ async def stats_weekly(
 
     week_start = today - timedelta(days=6)
     if user_id:
+        if x_session_id:
+            await link_guest_scans(user_id, x_session_id, db)
         result = await db.execute(
             select(Scan).where(
                 Scan.user_id == user_id,
@@ -176,13 +222,22 @@ async def stats_weekly(
             )
         )
     else:
-        result = await db.execute(
-            select(Scan).where(
-                Scan.user_id == None,
-                Scan.session_id == x_session_id,
-                Scan.created_at >= datetime.combine(week_start, datetime.min.time()),
+        if x_session_id:
+            result = await db.execute(
+                select(Scan).where(
+                    Scan.user_id.is_(None),
+                    Scan.session_id == x_session_id,
+                    Scan.created_at >= datetime.combine(week_start, datetime.min.time()),
+                )
             )
-        )
+        else:
+            result = await db.execute(
+                select(Scan).where(
+                    Scan.user_id.is_(None),
+                    Scan.created_at >= datetime.combine(week_start, datetime.min.time()),
+                )
+            )
+
     week_scans = result.scalars().all()
 
     by_day = {}
@@ -223,13 +278,21 @@ async def export_report(
     import json
     user_id = current_user.id if current_user else None
     if user_id:
+        if x_session_id:
+            await link_guest_scans(user_id, x_session_id, db)
         result = await db.execute(
             select(Scan).where(Scan.scan_id == scan_id, Scan.user_id == user_id)
         )
     else:
-        result = await db.execute(
-            select(Scan).where(Scan.scan_id == scan_id, Scan.user_id == None, Scan.session_id == x_session_id)
-        )
+        if x_session_id:
+            result = await db.execute(
+                select(Scan).where(Scan.scan_id == scan_id, Scan.user_id.is_(None), Scan.session_id == x_session_id)
+            )
+        else:
+            result = await db.execute(
+                select(Scan).where(Scan.scan_id == scan_id, Scan.user_id.is_(None))
+            )
+
     scan = result.scalar_one_or_none()
     if not scan:
         from fastapi import HTTPException
@@ -260,11 +323,33 @@ async def export_scan_pdf(
     scan_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
+    x_session_id: Optional[str] = Header(None),
 ):
     from fastapi import HTTPException, Response
     from services.report_service import AIReportService
     
     try:
+        user_id = current_user.id if current_user else None
+        if user_id:
+            if x_session_id:
+                await link_guest_scans(user_id, x_session_id, db)
+            result = await db.execute(
+                select(Scan).where(Scan.scan_id == scan_id, Scan.user_id == user_id)
+            )
+        else:
+            if x_session_id:
+                result = await db.execute(
+                    select(Scan).where(Scan.scan_id == scan_id, Scan.user_id.is_(None), Scan.session_id == x_session_id)
+                )
+            else:
+                result = await db.execute(
+                    select(Scan).where(Scan.scan_id == scan_id, Scan.user_id.is_(None))
+                )
+        
+        scan = result.scalar_one_or_none()
+        if not scan:
+            raise HTTPException(status_code=404, detail="Scan not found")
+            
         pdf_bytes = await AIReportService.generate_scan_pdf(scan_id, db)
         return Response(
             content=pdf_bytes,
@@ -284,9 +369,14 @@ async def generate_user_report(
     format: str = Query("json", regex="^json$"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),  # Requires authentication
+    x_session_id: Optional[str] = Header(None),
 ):
     """Generate a comprehensive report for the authenticated user including all their scans."""
     import json
+
+    if x_session_id:
+        await link_guest_scans(current_user.id, x_session_id, db)
+
 
     # Get user info
     user_info = {
