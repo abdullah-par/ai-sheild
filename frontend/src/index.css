@@ -124,6 +124,27 @@ body {
   border-color: var(--text-muted);
 }
 
+.btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 0;
+  transition: color 0.2s;
+  margin-bottom: 16px;
+}
+
+.btn-back:hover {
+  color: var(--accent-primary);
+}
+
+
 /* Animations */
 @keyframes float {
   0%, 100% { transform: translateY(0px); }

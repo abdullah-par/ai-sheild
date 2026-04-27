@@ -123,7 +123,7 @@ const ResultPanel = ({ result, onClear }) => (
 );
 
 /* ── Main Page ───────────────────────────────── */
-export default function PhishingPage() {
+export default function PhishingPage({ onNavigate }) {
   const [tab, setTab] = useState('url');
   const [url, setUrl] = useState('');
   const [emailText, setEmailText] = useState('');
@@ -154,7 +154,14 @@ export default function PhishingPage() {
       <div className="ph-grid-2" />
       
       <div className="ph-container-2">
+        <button className="btn-back" onClick={() => onNavigate('home')}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+          Back to Home
+        </button>
         <header className="ph-header-2">
+
           <div className="ph-badge-2">AI-POWERED PHISHING ENGINE</div>
           <h1 className="ph-title-2">ML-Based Threat Detection</h1>
           <p className="ph-desc-2">

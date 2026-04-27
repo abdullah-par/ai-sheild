@@ -249,7 +249,7 @@ const ResultPanel = ({ result, preview, onClear }) => {
 };
 
 /* ── Main Page ───────────────────────────────── */
-export default function SteganographyPage() {
+export default function SteganographyPage({ onNavigate }) {
   const [activeTab, setActiveTab] = useState('analyze');
   
   // Analyze State
@@ -389,7 +389,14 @@ export default function SteganographyPage() {
       <div className="stego-grid-2" />
       
       <div className="stego-container-2">
+        <button className="btn-back" onClick={() => onNavigate('home')}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+          Back to Home
+        </button>
         <header className="stego-header-2">
+
           <div className="stego-badge-2">AI-POWERED STEGO ENGINE</div>
           <h1 className="stego-title-2">LSB & Entropy Detection</h1>
           <p className="stego-desc-2">

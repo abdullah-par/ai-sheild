@@ -92,3 +92,11 @@ export const exportReport = (scanId, format = 'json') =>
 
 export const generateUserReport = (format = 'json') =>
   get(`/user/report?format=${format}`);
+
+/* ── AI Reports ───────────────────────────── */
+export const generateAIReport = (timeRange = '24h') => post(`/reports/generate?time_range=${timeRange}`);
+export const getLatestAIReport = () => get('/reports/latest');
+export const getAIReportPDFUrl = (reportId) => `${BASE}/reports/${reportId}/pdf`;
+export const getScanPDFUrl = (scanId) => `${BASE}/scans/${scanId}/pdf`;
+
+

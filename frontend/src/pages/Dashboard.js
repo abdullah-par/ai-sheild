@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './Dashboard.css';
-import { getStats, getWeeklyStats, getScanHistory, getScanDetail, generateUserReport } from '../services/api';
+import { getStats, getWeeklyStats, getScanHistory, getScanDetail, generateUserReport, getScanPDFUrl } from '../services/api';
 import { transformStats, transformWeekly, transformHistory } from '../services/transformers';
 import { useAuth } from '../services/AuthContext';
 
@@ -145,7 +145,13 @@ const Dashboard = ({ onNavigate }) => {
   const [activeModalScan, setActiveModalScan] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
 
+  const handleDownloadScanPDF = (scanId) => {
+    const url = getScanPDFUrl(scanId);
+    window.open(url, '_blank');
+  };
+
   const handleUserReport = async () => {
+
     if (!user) {
       alert('Please log in to generate a user report.');
       onNavigate('auth');
@@ -269,14 +275,15 @@ const Dashboard = ({ onNavigate }) => {
           </div>
           <div className="dash-actions">
             {user && (
-              <button className="btn-secondary" onClick={handleUserReport}>
+              <button className="btn-secondary" onClick={() => onNavigate('reports')}>
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                   <path d="M2 4h12M2 8h12M2 12h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                   <path d="M10 14l2-2-2-2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
-                Generate Report
+                AI Insights
               </button>
             )}
+
             <button className="btn-primary" onClick={() => onNavigate('scan')}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <circle cx="7" cy="7" r="4.5" stroke="white" strokeWidth="1.5"/>
@@ -524,7 +531,11 @@ const Dashboard = ({ onNavigate }) => {
 
                 <div className="modal-footer">
                   <button className="btn-secondary" onClick={() => setActiveModalScan(null)}>Close</button>
+                  <button className="btn-secondary" onClick={() => handleDownloadScanPDF(activeModalScan.scanId)}>
+                    Download PDF
+                  </button>
                   <button className="btn-primary" onClick={() => {
+
                     const scanToNavigate = { ...activeModalScan };
                     setActiveModalScan(null);
                     onNavigate('result', { 

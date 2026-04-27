@@ -88,6 +88,8 @@ const Navbar = ({ currentPage, onNavigate, theme, toggleTheme }) => {
           </li>
 
           <li><button onClick={() => { onNavigate('dashboard'); setMenuOpen(false); }} className={currentPage === 'dashboard' ? 'active' : ''}>Dashboard</button></li>
+          <li><button onClick={() => { onNavigate('reports'); setMenuOpen(false); }} className={currentPage === 'reports' ? 'active' : ''}>Reports</button></li>
+
           <li><button onClick={() => scrollToSection('features')}>Features</button></li>
           <li><button onClick={() => scrollToSection('how-it-works')}>How It Works</button></li>
         </ul>

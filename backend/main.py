@@ -9,6 +9,8 @@ from routers.phishing_router  import router as phishing_router
 from routers.stego_router     import router as stego_router
 from routers.dashboard_router import router as dashboard_router
 from routers.chatbot_router   import router as chatbot_router
+from routers.report_router    import router as report_router
+
 
 
 # ── DB Init on startup ───────────────────────────
@@ -50,6 +52,8 @@ app.include_router(phishing_router)
 app.include_router(stego_router)
 app.include_router(dashboard_router)
 app.include_router(chatbot_router)
+app.include_router(report_router)
+
 
 
 # ── Health Check ─────────────────────────────────

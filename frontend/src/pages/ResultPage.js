@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import './ResultPage.css';
-import { exportReport } from '../services/api';
+import { getScanPDFUrl } from '../services/api';
+
 
 /* ── Simulated Analysis Data ────────────────── */
 const generateResult = (scanData) => {
@@ -266,37 +267,15 @@ const ResultPage = ({ scanData, onNavigate }) => {
     recommendations: result?.recommendations || [],
   });
 
-  const downloadJsonBlob = (payload, filename) => {
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleJsonExport = async () => {
-    if (!result || exporting) return;
-    setExporting(true);
-    try {
-      if (scanData.scanId) {
-        const res = await exportReport(scanData.scanId, 'json');
-        if (!res.ok) throw new Error(`Export failed (${res.status})`);
-        const payload = await res.json();
-        downloadJsonBlob(payload, `report_${scanData.scanId}.json`);
-      } else {
-        const fallbackId = `local_${Date.now()}`;
-        downloadJsonBlob(buildLocalReport(), `report_${fallbackId}.json`);
-      }
-    } catch (e) {
-      alert(e.message || 'Failed to export report');
-    } finally {
-      setExporting(false);
+  const handlePDFExport = () => {
+    if (scanData.scanId) {
+      const url = getScanPDFUrl(scanData.scanId);
+      window.open(url, '_blank');
+    } else {
+      alert('PDF generation requires a persistent telemetry Scan ID. Try analyzing via the Dashboard tools to generate persistent insights.');
     }
   };
+
 
   if (loading) {
     return (
@@ -336,7 +315,14 @@ const ResultPage = ({ scanData, onNavigate }) => {
   return (
     <div className="result-page">
       <div className="result-container">
+        <button className="btn-back" onClick={() => onNavigate('dashboard')}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+          Back to Dashboard
+        </button>
         {/* Header */}
+
         <div className="result-header">
           <div className={`result-verdict ${result.isPhishing ? 'verdict-danger' : 'verdict-safe'}`}>
             <div className="verdict-icon">
@@ -409,10 +395,13 @@ const ResultPage = ({ scanData, onNavigate }) => {
 
         {/* Actions */}
         <div className="result-actions">
-          <button className="action-btn" onClick={handleJsonExport} disabled={exporting}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v9M4 8l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M2 14h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-            {exporting ? 'Exporting...' : 'Download JSON Report'}
+          <button className="action-btn" onClick={handlePDFExport}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Download PDF Report
           </button>
+
           <button className="action-btn" onClick={() => navigator.share?.({ title: 'AI Shield Scan Result', text: `Scan Result: ${result?.threatType || 'Analysis Complete'}`, url: window.location.href }) || alert('Sharing not supported on this browser')}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M14 10v2a2 2 0 01-2 2H4a2 2 0 01-2-2v-2M8 2v8M5 5l3-3 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             Share Result

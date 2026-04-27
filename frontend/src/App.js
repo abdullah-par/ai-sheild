@@ -9,6 +9,8 @@ import Dashboard from './pages/Dashboard';
 import PhishingPage from './pages/PhishingPage';
 import SteganographyPage from './pages/SteganographyPage';
 import AuthPage from './pages/AuthPage';
+import ReportsPage from './pages/ReportsPage';
+
 import FloatingChatbot from './components/FloatingChatbot';
 import { AuthProvider } from './services/AuthContext';
 
@@ -58,6 +60,9 @@ function AppContent() {
         return <PhishingPage onNavigate={navigate} />;
       case 'steganography':
         return <SteganographyPage onNavigate={navigate} />;
+      case 'reports':
+        return <ReportsPage onNavigate={navigate} />;
+
       default:
         return <LandingPage onNavigate={navigate} />;
     }

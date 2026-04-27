@@ -36,3 +36,20 @@ class Scan(Base):
 
     # Many-to-one relationship with User
     user = relationship("User", back_populates="scans")
+
+
+class Report(Base):
+    __tablename__ = "reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(255), nullable=False)
+    time_range_start = Column(DateTime(timezone=True), nullable=False)
+    time_range_end = Column(DateTime(timezone=True), nullable=False)
+    total_flows = Column(Integer, default=0)
+    malicious_count = Column(Integer, default=0)
+    blocked_count = Column(Integer, default=0)
+    top_attack_type = Column(String(100), nullable=True)
+    timeline_json = Column(Text, nullable=True)
+    ai_raw_content = Column(Text, nullable=True)
+    status = Column(String(50), default="pending")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

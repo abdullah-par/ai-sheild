@@ -220,6 +220,29 @@ async def export_report(
     })
 
 
+@router.get("/scans/{scan_id}/pdf")
+async def export_scan_pdf(
+    scan_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user),
+):
+    from fastapi import HTTPException, Response
+    from services.report_service import AIReportService
+    
+    try:
+        pdf_bytes = await AIReportService.generate_scan_pdf(scan_id, db)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=scan_report_{scan_id}.pdf"}
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 # ── User Report Generation ──────────────────────
 @router.get("/user/report")
 async def generate_user_report(
