@@ -109,6 +109,16 @@ export const getAIReportPDFUrl = (reportId) => {
   const qs = token ? `?token=${encodeURIComponent(token)}` : '';
   return `${BASE}/reports/${reportId}/pdf${qs}`;
 };
-export const getScanPDFUrl = (scanId) => `${BASE}/scans/${scanId}/pdf`;
+export const getScanPDFUrl = (scanId) => {
+  const params = new URLSearchParams();
+  const token = getToken();
+  const sessionId = sessionStorage.getItem('session_id');
+
+  if (token) params.set('token', token);
+  if (sessionId) params.set('session_id', sessionId);
+
+  const qs = params.toString();
+  return `${BASE}/scans/${scanId}/pdf${qs ? `?${qs}` : ''}`;
+};
 
 

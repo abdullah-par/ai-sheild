@@ -321,6 +321,8 @@ async def export_report(
 @router.get("/scans/{scan_id}/pdf")
 async def export_scan_pdf(
     scan_id: str,
+    token: Optional[str] = None,
+    session_id: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
     x_session_id: Optional[str] = Header(None),
@@ -329,17 +331,31 @@ async def export_scan_pdf(
     from services.report_service import AIReportService
     
     try:
+        if not current_user and token:
+            try:
+                from auth import SECRET_KEY, ALGORITHM
+                from jose import jwt
+
+                payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+                email = payload.get("sub")
+                if email:
+                    result = await db.execute(select(User).where(User.email == email))
+                    current_user = result.scalar_one_or_none()
+            except Exception:
+                pass
+
+        effective_session_id = x_session_id or session_id
         user_id = current_user.id if current_user else None
         if user_id:
-            if x_session_id:
-                await link_guest_scans(user_id, x_session_id, db)
+            if effective_session_id:
+                await link_guest_scans(user_id, effective_session_id, db)
             result = await db.execute(
                 select(Scan).where(Scan.scan_id == scan_id, Scan.user_id == user_id)
             )
         else:
-            if x_session_id:
+            if effective_session_id:
                 result = await db.execute(
-                    select(Scan).where(Scan.scan_id == scan_id, Scan.user_id.is_(None), Scan.session_id == x_session_id)
+                    select(Scan).where(Scan.scan_id == scan_id, Scan.user_id.is_(None), Scan.session_id == effective_session_id)
                 )
             else:
                 result = await db.execute(
@@ -356,6 +372,8 @@ async def export_scan_pdf(
             media_type="application/pdf",
             headers={"Content-Disposition": f"attachment; filename=scan_report_{scan_id}.pdf"}
         )
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
