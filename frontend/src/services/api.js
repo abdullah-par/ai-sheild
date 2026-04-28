@@ -104,7 +104,11 @@ export const generateUserReport = (format = 'json') =>
 /* ── AI Reports ───────────────────────────── */
 export const generateAIReport = (timeRange = '24h') => post(`/reports/generate?time_range=${timeRange}`);
 export const getLatestAIReport = () => get('/reports/latest');
-export const getAIReportPDFUrl = (reportId) => `${BASE}/reports/${reportId}/pdf`;
+export const getAIReportPDFUrl = (reportId) => {
+  const token = getToken();
+  const qs = token ? `?token=${encodeURIComponent(token)}` : '';
+  return `${BASE}/reports/${reportId}/pdf${qs}`;
+};
 export const getScanPDFUrl = (scanId) => `${BASE}/scans/${scanId}/pdf`;
 
 

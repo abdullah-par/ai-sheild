@@ -60,10 +60,23 @@ async def get_report(
 @router.get("/{report_id}/pdf")
 async def get_report_pdf(
     report_id: int, 
+    token: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user)
 ):
     try:
+        if not current_user and token:
+            try:
+                from auth import SECRET_KEY, ALGORITHM
+                from jose import jwt
+                payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+                email = payload.get("sub")
+                if email:
+                    result = await db.execute(select(User).where(User.email == email))
+                    current_user = result.scalar_one_or_none()
+            except Exception:
+                pass
+
         user_id = current_user.id if current_user else None
         if user_id:
             query = select(Report).where(Report.id == report_id, Report.user_id == user_id)
